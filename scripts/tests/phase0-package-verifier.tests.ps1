@@ -12,7 +12,8 @@ function New-TestPackage {
         [Parameter(Mandatory = $true)][string] $ZipPath,
         [bool] $IncludeLockfile = $true,
         [bool] $ValidIconReference = $true,
-        [bool] $ValidManifestDigest = $true
+        [bool] $ValidManifestDigest = $true,
+        [string] $AssetPath = "assets/-sample-cover-.svg"
     )
 
     $folder = Join-Path (Split-Path -Parent $ZipPath) ([IO.Path]::GetFileNameWithoutExtension($ZipPath))
@@ -37,12 +38,12 @@ function New-TestPackage {
         [ordered]@{
             id = "22222222-2222-4222-8222-222222222222"
             kind = "image"
-            path = "assets/sample-cover.svg"
+            path = $AssetPath
             sha256 = $assetHash
         }
     )
     $canonicalManifest = '[{"id":"11111111-1111-4111-8111-111111111111","kind":"applicationIcon","path":"assets/launcher-icon.ico","sha256":"' +
-        $iconHash + '"},{"id":"22222222-2222-4222-8222-222222222222","kind":"image","path":"assets/sample-cover.svg","sha256":"' +
+        $iconHash + '"},{"id":"22222222-2222-4222-8222-222222222222","kind":"image","path":"' + $AssetPath + '","sha256":"' +
         $assetHash + '"}]'
     $hasher = [Security.Cryptography.SHA256]::Create()
     try {
@@ -130,6 +131,14 @@ try {
     Assert-True ($badManifest.exitCode -ne 0) "A package with an incorrect asset-manifest digest was accepted."
     Assert-True ($badManifest.report.failure -match "assetManifestSha256") "The bad manifest digest was rejected for an unexpected reason."
     Write-Host "PASS: incorrect canonical asset-manifest digests are rejected."
+
+    $unsafeAssetPathZip = Join-Path $work "unsafe-asset-path.zip"
+    $unsafeAssetPathReport = Join-Path $work "unsafe-asset-path-report.json"
+    New-TestPackage -ZipPath $unsafeAssetPathZip -AssetPath "assets/../outside.svg"
+    $unsafeAssetPath = Invoke-Verifier -ZipPath $unsafeAssetPathZip -ReportPath $unsafeAssetPathReport
+    Assert-True ($unsafeAssetPath.exitCode -ne 0) "A package with a non-portable asset path was accepted."
+    Assert-True ($unsafeAssetPath.report.failure -match "non-portable") "The unsafe asset path was rejected for an unexpected reason."
+    Write-Host "PASS: non-portable asset paths are rejected."
 
     $traversalZip = Join-Path $work "traversal.zip"
     $stream = [IO.File]::Open($traversalZip, [IO.FileMode]::CreateNew, [IO.FileAccess]::ReadWrite, [IO.FileShare]::None)
