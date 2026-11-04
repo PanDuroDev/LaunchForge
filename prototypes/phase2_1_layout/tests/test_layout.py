@@ -234,6 +234,35 @@ class StackLayoutTests(unittest.TestCase):
                 Rect(0, 0, 10, 10), [], axis=Axis.HORIZONTAL, gap=-1
             )
 
+    def test_fill_allocation_does_not_overflow_when_weights_are_large(self):
+        """Verify finite large weights retain their ratios without sum overflow."""
+        result = layout_stack(
+            Rect(0, 0, 300, 40),
+            [
+                LayoutChild("a", AxisSpec.fill(1e308), AxisSpec.fixed(20)),
+                LayoutChild("b", AxisSpec.fill(1e308), AxisSpec.fixed(20)),
+            ],
+            axis=Axis.HORIZONTAL,
+        )
+        self.assertAlmostEqual(result.by_key("a").width, 150)
+        self.assertAlmostEqual(result.by_key("b").width, 150)
+        self.assertEqual(result.by_key("b").right, 300)
+        self.assertFalse(result.overflow_x)
+
+    def test_fill_allocation_preserves_ratios_for_large_weights(self):
+        """Verify normalization preserves unequal large finite weight ratios."""
+        result = layout_stack(
+            Rect(0, 0, 100, 40),
+            [
+                LayoutChild("heavy", AxisSpec.fill(1e308), AxisSpec.fixed(20)),
+                LayoutChild("light", AxisSpec.fill(1e307), AxisSpec.fixed(20)),
+            ],
+            axis=Axis.HORIZONTAL,
+        )
+        self.assertAlmostEqual(result.by_key("heavy").width, 100 / 1.1)
+        self.assertAlmostEqual(result.by_key("light").width, 10 / 1.1)
+        self.assertAlmostEqual(result.by_key("light").right, 100)
+
     def test_capped_fill_child_honors_center_and_end_cross_alignment(self):
         """Verify capped cross-axis fill honors center and end alignment."""
         for alignment, expected_y in (
