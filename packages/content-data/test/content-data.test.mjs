@@ -133,3 +133,10 @@ test("enforces timeout and caller cancellation while streaming a response body",
   await assert.rejects(pending, e => e.code === "cancelled");
 });
 
+
+
+test("rejects malformed mapping definitions and excessive inspector limits", () => {
+  assert.throws(() => mapFields({ value: 1 }, [null]), e => e.code === "invalid_mapping");
+  assert.throws(() => mapFields({ value: 1 }, [{ field: "value", source: "/value", type: "any", transforms: ["eval"] }]), e => e.code === "invalid_mapping");
+  assert.throws(() => inspectResponse({ value: 1 }, 0), e => e.code === "invalid_request");
+});
