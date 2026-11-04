@@ -11,7 +11,8 @@ function New-TestPackage {
     param(
         [Parameter(Mandatory = $true)][string] $ZipPath,
         [bool] $IncludeLockfile = $true,
-        [bool] $ValidIconReference = $true
+        [bool] $ValidIconReference = $true,
+        [bool] $ValidManifestDigest = $true
     )
 
     $folder = Join-Path (Split-Path -Parent $ZipPath) ([IO.Path]::GetFileNameWithoutExtension($ZipPath))
@@ -26,26 +27,43 @@ function New-TestPackage {
     $iconHash = "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
     $iconId = if ($ValidIconReference) { "11111111-1111-4111-8111-111111111111" } else { "99999999-9999-4999-8999-999999999999" }
 
+    $manifest = @(
+        [ordered]@{
+            id = "11111111-1111-4111-8111-111111111111"
+            kind = "applicationIcon"
+            path = "assets/launcher-icon.ico"
+            sha256 = $iconHash
+        },
+        [ordered]@{
+            id = "22222222-2222-4222-8222-222222222222"
+            kind = "image"
+            path = "assets/sample-cover.svg"
+            sha256 = $assetHash
+        }
+    )
+    $canonicalManifest = '[{"id":"11111111-1111-4111-8111-111111111111","kind":"applicationIcon","path":"assets/launcher-icon.ico","sha256":"' +
+        $iconHash + '"},{"id":"22222222-2222-4222-8222-222222222222","kind":"image","path":"assets/sample-cover.svg","sha256":"' +
+        $assetHash + '"}]'
+    $hasher = [Security.Cryptography.SHA256]::Create()
+    try {
+        $manifestDigest = [BitConverter]::ToString(
+            $hasher.ComputeHash([Text.Encoding]::UTF8.GetBytes($canonicalManifest))
+        ).Replace("-", "").ToLowerInvariant()
+    }
+    finally {
+        $hasher.Dispose()
+    }
+    if (-not $ValidManifestDigest) {
+        $manifestDigest = "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc"
+    }
+
     $metadata = [ordered]@{
         format = "launchforge.export"
         buildContractVersion = 1
         projectSchemaVersion = 1
         renderer = "shared-dom-v1"
-        assetManifest = @(
-            [ordered]@{
-                id = "11111111-1111-4111-8111-111111111111"
-                kind = "applicationIcon"
-                path = "assets/launcher-icon.ico"
-                sha256 = $iconHash
-            },
-            [ordered]@{
-                id = "22222222-2222-4222-8222-222222222222"
-                kind = "image"
-                path = "assets/sample-cover.svg"
-                sha256 = $assetHash
-            }
-        )
-        assetManifestSha256 = $assetHash
+        assetManifest = $manifest
+        assetManifestSha256 = $manifestDigest
         applicationIconAssetId = $iconId
         applicationIconSha256 = $iconHash
     }
@@ -104,6 +122,14 @@ try {
     $badIcon = Invoke-Verifier -ZipPath $badIconZip -ReportPath $badIconReport
     Assert-True ($badIcon.exitCode -ne 0) "A package with a dangling application-icon reference was accepted."
     Write-Host "PASS: dangling application-icon references are rejected."
+
+    $badManifestZip = Join-Path $work "bad-manifest.zip"
+    $badManifestReport = Join-Path $work "bad-manifest-report.json"
+    New-TestPackage -ZipPath $badManifestZip -ValidManifestDigest $false
+    $badManifest = Invoke-Verifier -ZipPath $badManifestZip -ReportPath $badManifestReport
+    Assert-True ($badManifest.exitCode -ne 0) "A package with an incorrect asset-manifest digest was accepted."
+    Assert-True ($badManifest.report.failure -match "assetManifestSha256") "The bad manifest digest was rejected for an unexpected reason."
+    Write-Host "PASS: incorrect canonical asset-manifest digests are rejected."
 
     $traversalZip = Join-Path $work "traversal.zip"
     $stream = [IO.File]::Open($traversalZip, [IO.FileMode]::CreateNew, [IO.FileAccess]::ReadWrite, [IO.FileShare]::None)
