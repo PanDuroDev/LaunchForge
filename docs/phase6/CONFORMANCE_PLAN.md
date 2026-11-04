@@ -197,7 +197,7 @@ Do not run these tests against guessed interfaces. The implementation sequence i
 
 1. Approve Phase 0 stack, threat model, project format, component/renderer contract, Runtime/build boundary, and baseline measurement protocol.
 2. Accept Phase 1 schema, fixture, migration metadata, and preview/export behavior contracts.
-3. Accept the Phase 2 layout/assets/localization contracts and Phase 3 binding/action/security contracts that affect project compatibility.
+3. Accept the Phase 2 layout/assets/localization contracts and Phase 3 binding/action/security contracts that affect project compatibility. PR #21's Stage 3.1 prototype must first receive contract review; DNS/IP egress policy must be implemented in the privileged host, not inferred from HTTPS/same-origin redirects.
 4. Accept the Phase 4 manifest/filesystem/lifecycle contracts and Phase 5 package/update/trust/recovery contracts.
 5. Implement the harness and adapters against the approved APIs, then run the inventory above on each claimed target tuple.
 6. Publish the support matrix only after evidence review by the architecture/integration owner and named maintainer.
@@ -234,7 +234,7 @@ Until then, this protocol is a specification/handoff artifact and does not annou
 
 The planned cases are mirrored in `conformance/phase6-catalog.json`. Each entry records its stable test ID, category, scenario, expected behavior, applicable product surfaces, prerequisite-area labels, required evidence, mandatory flag, and lifecycle state. The catalog also has one canonical `dependency_registry`; every case dependency must match one registered identifier and the registry must not contain duplicate identifiers.
 
-All 38 entries currently use `lifecycle: planned`. The 38 registered dependency strings are planning labels only and are not approved API names or proof that the dependencies exist. Keep each prerequisite area under one canonical label; do not introduce spelling/plural aliases.
+All 40 entries currently use `lifecycle: planned`. The 38 registered dependency strings are planning labels only and are not approved API names or proof that the dependencies exist. Keep each prerequisite area under one canonical label; do not introduce spelling/plural aliases.
 
 Validate the catalog structure from the repository root:
 
@@ -277,3 +277,10 @@ These failures and boundaries keep executable Phase 6 product conformance, 6.2 e
 - `LF-COMPAT-008` requires the approved application-icon reference to validate and the complete declared ICO payload to be bounded and embedded byte-for-byte in the package.
 
 Both remain planned until Phase 0/1 approves the source contracts and supplies runnable fixtures. The catalog records the current candidate rule but does not itself approve or change schema fields.
+
+## 12. Phase 3.1 data and network conformance
+
+- `LF-CAP-006` covers the approved JSON Pointer and typed binding semantics: valid/invalid pointer escapes, array indices, prototype-sensitive segments, declared output types, optional/default values, duplicate fields, and safe transformation limits. The standalone Phase 3.1 prototype has fixture tests, but these semantics must not be treated as project schema or Runtime contracts until accepted.
+- `LF-SEC-006` covers host-enforced DNS/IP egress policy. HTTPS scheme validation and same-origin redirects do not block loopback/private/reserved addresses or DNS rebinding. The privileged host must enforce approved destination policy after resolution and at connection time; tests must prove denied destinations cause no connection.
+
+PR #21's isolated Node CI passed typecheck and fixture tests in run [#41923174067](https://github.com/PanDuroDev/LaunchForge/actions/runs/41923174067). This is evidence for the prototype package only. No Studio/Runtime integration, DNS/IP host guard, credential storage, export scanning, or preview/Runtime parity is claimed.
