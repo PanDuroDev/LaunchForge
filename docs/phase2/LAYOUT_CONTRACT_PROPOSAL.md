@@ -140,7 +140,7 @@ Proposed dimension union:
 | `fit` | none | Use the component's intrinsic size, clamped to `min`/`max`. |
 | `fill` | `weight` | Participate in weighted allocation on a stack main axis; fill the available cross-axis/overlay extent when applicable, subject to bounds. |
 
-All modes accept optional finite non-negative `min` (default 0) and optional finite non-negative `max`; when both exist, `max >= min` is required. Fixed `value` is finite and non-negative. Fill `weight` is finite and strictly positive; the default weight is 1 if the owner chooses to omit it.
+All modes accept optional finite non-negative `min` (default 0) and optional finite non-negative `max`; when both exist, `max >= min` is required. Fixed `value` is finite and non-negative. Fill `weight` is required, finite, and strictly positive; the Studio inserts a default weight of 1 when creating a fill dimension.
 
 For overlay children, the same `layout` object additionally accepts `alignX` and `alignY`, each one of `start | center | end | stretch`. These fields are valid only when the direct parent uses `kind: "overlay"`; the semantic validator must reject them under a stack. Stack children use their parent's `alignItems` value.
 
@@ -206,7 +206,7 @@ Recommended migration path:
 
 1. A project using `schemaVersion: 1` is migrated explicitly to schema v2 using a versioned, deterministic `1 -> 2` migration.
 2. Preserve project, component, game, and asset IDs; preserve all references and non-layout authored values.
-3. Map v1 `axis` to stack `axis`, and scalar `padding` to four equal insets. Preserve `gap` and theme background.
+3. Map v1 `axis` to stack `axis`, and scalar `padding` to four equal insets. Preserve `gap` and theme background. Preserve the current renderer's axis-specific cross alignment as well: horizontal containers center their children, while vertical containers use the CSS flex default stretch behavior.
 4. Preserve the v1 renderer's actual default child sizing/alignment behavior. Do **not** blindly map every old child to `fit`: the current CSS renderer uses browser flex defaults and component-specific styles, which are not proven equivalent to the Python reference's sizing modes.
 5. Before choosing a direct conversion, compare every accepted Phase 1 fixture at the same logical viewport in the v1 and v2 renderers. If exact conversion cannot be demonstrated, use an explicit migration-only legacy layout compatibility mode until the user edits that container; editing converts it to explicit v2 stack properties.
 6. Never rewrite the source project simply because it was opened. Migration writes a new/backup-protected copy only after successful validation, according to the accepted ProjectStore migration policy.
