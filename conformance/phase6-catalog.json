@@ -2,7 +2,7 @@
   "catalog_version": 1,
   "catalog_status": "planning",
   "protocol": "docs/phase6/CONFORMANCE_PLAN.md",
-  "contract_dependency_note": "dependency labels identify prerequisite areas only; they are not approved API names, schema identifiers, or evidence that a contract exists",
+  "contract_dependency_note": "Registry IDs are canonical planning labels only. They identify prerequisite areas and do not constitute approved APIs, schemas, or evidence that a contract exists.",
   "cases": [
     {
       "test_id": "LF-COMPAT-001",
@@ -161,8 +161,8 @@
       "contract_dependencies": [
         "phase0:migration-policy",
         "phase1:project-format",
-        "phase2:asset-layout-contracts",
-        "phase3:data-action-contracts"
+        "phase2:asset-contract",
+        "phase3:data-action-contract"
       ],
       "evidence_required": [
         "semantic diff",
@@ -745,5 +745,45 @@
       "mandatory": true,
       "lifecycle": "planned"
     }
+  ],
+  "dependency_registry": [
+    "phase0:capability-contract",
+    "phase0:capability-version-policy",
+    "phase0:credential-classification",
+    "phase0:filesystem-security-policy",
+    "phase0:import-threat-model",
+    "phase0:logging-redaction-policy",
+    "phase0:migration-failure-policy",
+    "phase0:migration-policy",
+    "phase0:performance-baseline",
+    "phase0:project-format",
+    "phase0:renderer-parity-policy",
+    "phase0:runtime-permission-model",
+    "phase0:test-strategy",
+    "phase1:asset-reference-contract",
+    "phase1:build-validation",
+    "phase1:conformance-fixtures",
+    "phase1:project-format",
+    "phase1:project-persistence",
+    "phase1:project-validation",
+    "phase1:renderer-contract",
+    "phase1:runtime-api",
+    "phase1:runtime-capabilities",
+    "phase2:accessibility-localization-contract",
+    "phase2:asset-contract",
+    "phase2:layout-contract",
+    "phase3:credential-export-policy",
+    "phase3:credential-policy",
+    "phase3:data-action-contract",
+    "phase3:event-action-contract",
+    "phase5:artifact-inventory-contract",
+    "phase5:diagnostics-policy",
+    "phase5:install-uninstall-policy",
+    "phase5:package-contract",
+    "phase5:signing-trust-policy",
+    "phase5:supported-os-baseline",
+    "phase5:update-recovery-contract",
+    "phase5:updater-trust-contract",
+    "phase5:upgrade-contract"
   ]
 }
