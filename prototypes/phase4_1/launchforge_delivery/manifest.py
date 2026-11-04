@@ -72,6 +72,13 @@ def _reject_float(value: str) -> None:
     raise ManifestError(f"floating-point JSON number is forbidden: {value}")
 
 
+def _parse_integer(value: str) -> int:
+    """Parse a bounded JSON integer before Python converts untrusted digit strings."""
+    if len(value) > 32:
+        raise ManifestError("integer literal exceeds the supported digit limit")
+    return int(value)
+
+
 def _require_string(value: object, name: str, max_chars: int) -> str:
     """Validate a bounded, non-empty Unicode string field."""
     if not isinstance(value, str) or not value or len(value) > max_chars:
@@ -168,6 +175,7 @@ def parse_and_verify_manifest(
             text,
             object_pairs_hook=_object_without_duplicates,
             parse_float=_reject_float,
+            parse_int=_parse_integer,
             parse_constant=_reject_constant,
         )
     except ManifestError:
