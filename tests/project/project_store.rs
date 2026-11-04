@@ -306,6 +306,15 @@ fn semantic_validation_rejects_windows_reserved_and_nonportable_asset_paths() {
 }
 
 #[test]
+fn semantic_validation_accepts_schema_max_length_application_icon_filename() {
+    let store = store();
+    let mut project = sample_project();
+    project["assets"][1]["path"] = json!(format!("assets/{}.ico", "a".repeat(120)));
+
+    store.validator().validate(&project).unwrap();
+}
+
+#[test]
 fn semantic_validation_rejects_case_insensitive_asset_path_collisions() {
     let store = store();
     let mut project = sample_project();
