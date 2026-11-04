@@ -301,6 +301,150 @@ fn save_replaces_an_existing_project_without_partial_json() {
     );
 }
 
+
+#[test]
+fn semantic_validation_rejects_whitespace_only_user_facing_strings() {
+    let store = store();
+
+    let mut project_name = sample_project();
+    project_name["name"] = json!("   ");
+    expect_validation_code(
+        store.validator().validate(&project_name).unwrap_err(),
+        "INVALID_STRING",
+    );
+
+    let mut window_title = sample_project();
+    window_title["window"]["title"] = json!("   ");
+    expect_validation_code(
+        store.validator().validate(&window_title).unwrap_err(),
+        "INVALID_STRING",
+    );
+
+    let mut game_title = sample_project();
+    game_title["games"][0]["title"] = json!("   ");
+    expect_validation_code(
+        store.validator().validate(&game_title).unwrap_err(),
+        "INVALID_STRING",
+    );
+
+    let mut button_label = sample_project();
+    button_label["components"][0]["children"][4]["props"]["label"] = json!("   ");
+    expect_validation_code(
+        store.validator().validate(&button_label).unwrap_err(),
+        "INVALID_STRING",
+    );
+}
+
+#[test]
+fn semantic_validation_rejects_component_depth_over_the_v1_limit() {
+    let store = store();
+    let mut project = sample_project();
+
+    let mut node = json!({
+        "id": Uuid::new_v4().to_string(),
+        "type": "text",
+        "props": {
+            "value": "deep leaf",
+            "fontSize": 20,
+            "color": "text"
+        }
+    });
+
+    // One leaf plus MAX_COMPONENT_DEPTH container levels creates depth 17.
+    for _ in 0..16 {
+        node = json!({
+            "id": Uuid::new_v4().to_string(),
+            "type": "container",
+            "props": {
+                "axis": "vertical",
+                "gap": 0,
+                "padding": 0,
+                "background": "surface"
+            },
+            "children": [node]
+        });
+    }
+    project["components"][0] = node;
+
+    expect_validation_code(
+        store.validator().validate(&project).unwrap_err(),
+        "COMPONENT_DEPTH_LIMIT",
+    );
+}
+
+#[test]
+fn semantic_validation_rejects_component_count_over_the_v1_limit() {
+    let store = store();
+    let mut project = sample_project();
+    let mut containers = Vec::new();
+
+    for _ in 0..4 {
+        let children: Vec<Value> = (0..32)
+            .map(|_| {
+                json!({
+                    "id": Uuid::new_v4().to_string(),
+                    "type": "text",
+                    "props": {
+                        "value": "fixture",
+                        "fontSize": 12,
+                        "color": "text"
+                    }
+                })
+            })
+            .collect();
+
+        containers.push(json!({
+            "id": Uuid::new_v4().to_string(),
+            "type": "container",
+            "props": {
+                "axis": "vertical",
+                "gap": 0,
+                "padding": 0,
+                "background": "surface"
+            },
+            "children": children
+        }));
+    }
+
+    project["components"][0]["children"] = json!(containers);
+    expect_validation_code(
+        store.validator().validate(&project).unwrap_err(),
+        "COMPONENT_LIMIT",
+    );
+}
+
+#[test]
+fn schema_diagnostics_do_not_echo_invalid_field_values() {
+    let store = store();
+    let secret_canary = "synthetic-secret-canary-do-not-log";
+    let mut project = sample_project();
+    project["theme"]["surface"] = json!(secret_canary);
+
+    match store.validator().validate(&project).unwrap_err() {
+        ProjectError::ValidationFailed { diagnostics, .. } => {
+            assert!(!diagnostics.is_empty());
+            assert!(diagnostics.iter().all(|diagnostic| {
+                !diagnostic.message.contains(secret_canary)
+            }));
+            assert!(diagnostics.iter().any(|diagnostic| {
+                diagnostic.path == "/theme/surface"
+            }));
+        }
+        other => panic!("expected schema validation failure, got {other:?}"),
+    }
+}
+
+#[test]
+fn file_errors_do_not_echo_private_local_paths() {
+    let store = store();
+    let directory = tempdir().unwrap();
+    let private_path = directory.path().join("private-workspace-project.lfproject");
+    let private_path_text = private_path.to_string_lossy().to_string();
+
+    let error = store.open(&private_path).unwrap_err();
+    assert!(!error.to_string().contains(&private_path_text));
+}
+
 #[cfg(unix)]
 #[test]
 fn open_and_save_reject_symbolic_link_project_paths() {
