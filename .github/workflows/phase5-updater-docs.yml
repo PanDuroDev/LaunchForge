@@ -1,0 +1,53 @@
+name: Phase 5 updater trust proposal checks
+
+on:
+  pull_request:
+    paths:
+      - "docs/LAUNCHER_UPDATE_TRUST_PROPOSAL.md"
+      - "docs/LAUNCHER_UPDATE_CONFORMANCE_MATRIX.md"
+      - ".github/workflows/phase5-updater-docs.yml"
+  push:
+    branches:
+      - ai6/phase5-2-updater-trust-design
+
+permissions:
+  contents: read
+
+jobs:
+  validate-proposal:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Validate conformance IDs and release binding coverage
+        run: |
+          python - <<'PY'
+          import re
+          from pathlib import Path
+
+          matrix = Path("docs/LAUNCHER_UPDATE_CONFORMANCE_MATRIX.md").read_text(encoding="utf-8")
+          proposal = Path("docs/LAUNCHER_UPDATE_TRUST_PROPOSAL.md").read_text(encoding="utf-8")
+          ids = re.findall(r"^\\|\\s*([A-Z]{2,4}-\\d+[A-Z]?)\\s*\\|", matrix, re.MULTILINE)
+          if not ids:
+              raise SystemExit("No conformance case IDs found.")
+          duplicates = sorted({item for item in ids if ids.count(item) > 1})
+          if duplicates:
+              raise SystemExit(f"Duplicate conformance IDs: {duplicates}")
+          required_ids = {"TUF-010A", "TUF-010B", "TUF-010C", "TUF-015", "TUF-016", "REL-008", "REL-009"}
+          missing = sorted(required_ids - set(ids))
+          if missing:
+              raise SystemExit(f"Missing trust/release coverage: {missing}")
+          required_text = (
+              "product/channel/platform/architecture/application version",
+              "Accepted version-to-target binding is missing or corrupt",
+              "do not reconstruct from remote metadata",
+          )
+          for phrase in required_text:
+              if phrase not in matrix:
+                  raise SystemExit(f"Missing required matrix assertion: {phrase}")
+          if "never reconstruct historical bindings from the current remote repository" not in proposal:
+              raise SystemExit("Proposal must forbid reconstructing lost release bindings from remote metadata.")
+          print(f"Validated {len(ids)} unique updater conformance cases.")
+          PY
