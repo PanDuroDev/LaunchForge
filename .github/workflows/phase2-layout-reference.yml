@@ -1,0 +1,42 @@
+name: Phase 2.1 layout reference tests
+
+on:
+  pull_request:
+    paths:
+      - "prototypes/phase2_1_layout/**"
+      - ".github/workflows/phase2-layout-reference.yml"
+  push:
+    branches:
+      - main
+      - ai-3/phase-2-1-layout-reference
+    paths:
+      - "prototypes/phase2_1_layout/**"
+      - ".github/workflows/phase2-layout-reference.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  test-layout-reference:
+    name: Python ${{ matrix.python-version }} tests
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.10", "3.11", "3.12", "3.13"]
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Run layout unit tests
+        working-directory: prototypes/phase2_1_layout
+        run: python -m unittest discover -s tests -v
+
+      - name: Compile layout module and tests
+        working-directory: prototypes/phase2_1_layout
+        run: python -m compileall -q launchforge_layout tests
