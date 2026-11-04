@@ -243,3 +243,13 @@ python -m unittest discover -s tests -p "test_phase6_catalog.py" -v
 
 The standard-library validator checks catalog metadata, not LaunchForge behavior. The unit tests cover valid catalog structure, all protocol families, duplicate IDs, category/ID consistency, missing dependencies, invalid surfaces, field types, and invalid roots. A successful catalog check must never be reported as a passing product conformance run.
 
+
+## 8. CI gate for catalog maintenance
+
+The repository workflow `.github/workflows/phase6-catalog.yml` runs on relevant pull requests and pushes to `main` / the Phase 6 working branch. It uses Python 3.12 and runs, in order:
+
+1. `python tools/validate_conformance_catalog.py`
+2. `python -m unittest discover -s tests -p "test_phase6_catalog.py" -v`
+3. `python -m compileall -q tools/validate_conformance_catalog.py tests/test_phase6_catalog.py`
+
+A passing workflow demonstrates catalog metadata/test-harness health only. It is not a substitute for product-level migration, renderer, Runtime, packaging, security, or support-matrix conformance. The initial workflow attempt exposed an invalid `actions/setup-python` `cache: false` setting; the setting was removed, and the subsequent run passed on the exact PR checkout (36 catalog cases, 13 unit tests, compileall).
