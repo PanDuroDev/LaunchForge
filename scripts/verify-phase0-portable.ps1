@@ -93,6 +93,18 @@ try {
     }
     $report.checks.windowsX64 = "passed"
 
+    if (-not $ValidateOnly) {
+        $identity = [Security.Principal.WindowsIdentity]::GetCurrent()
+        $principal = New-Object Security.Principal.WindowsPrincipal($identity)
+        $adminSid = [Security.Principal.SecurityIdentifier]::new([Security.Principal.WellKnownSidType]::BuiltinAdministratorsSid, $null)
+        $isAdminMember = @($identity.Groups | ForEach-Object { $_.Value }) -contains $adminSid.Value
+        $isElevated = $principal.IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator) -or $isAdminMember
+        if ($isElevated) {
+            throw "Run this check from a standard user account that is not a member of Administrators."
+        }
+        $report.checks.standardUser = "passed"
+    }
+
     $zipPath = (Resolve-Path -LiteralPath $PackageZip).Path
     $zipInfo = Get-Item -LiteralPath $zipPath
     if ($zipInfo.Length -le 0) { throw "The package ZIP is empty." }
@@ -289,7 +301,13 @@ try {
                 throw "An ICO asset must be classified as applicationIcon."
             }
 
-            '{"id":"' + $assetId + '","kind":"' + $assetKind + '","path":"' + $assetPath + '","sha256":"' + $assetHash + '"}'
+            $canonicalEntry = [ordered]@{
+                id = $assetId
+                kind = $assetKind
+                path = $assetPath
+                sha256 = $assetHash
+            }
+            ConvertTo-Json -InputObject $canonicalEntry -Compress -Depth 4
         }
     )
     $canonicalManifest = "[" + ($canonicalEntries -join ",") + "]"
@@ -329,11 +347,6 @@ try {
         $report.checks.processLifetime = "not-run"
     }
     else {
-        $identity = [Security.Principal.WindowsIdentity]::GetCurrent()
-        $principal = New-Object Security.Principal.WindowsPrincipal($identity)
-        $adminSid = [Security.Principal.SecurityIdentifier]::new([Security.Principal.WellKnownSidType]::BuiltinAdministratorsSid, $null)
-        $isAdminMember = @($identity.Groups | ForEach-Object { $_.Value }) -contains $adminSid.Value
-        $isElevated = $principal.IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator) -or $isAdminMember
         $os = Get-CimInstance Win32_OperatingSystem
         $report.environment = [ordered]@{
             os = $os.Caption
@@ -342,14 +355,11 @@ try {
             cpu = (Get-CimInstance Win32_Processor | Select-Object -First 1 -ExpandProperty Name)
             logicalProcessors = [Environment]::ProcessorCount
             totalMemoryMB = [Math]::Round($os.TotalVisibleMemorySize / 1024, 0)
-            standardUser = (-not $isElevated)
+            standardUser = $true
             developerToolsPresent = @("node", "npm", "rustc", "cargo", "dotnet") | Where-Object {
                 $null -ne (Get-Command $_ -ErrorAction SilentlyContinue)
             }
         }
-        if ($isElevated) { throw "Run this check from a standard user account that is not a member of Administrators." }
-        $report.checks.standardUser = "passed"
-
         $webView2 = @(Get-WebView2Installations)
         $report.environment.webView2Versions = @($webView2 | ForEach-Object version)
         if ($webView2.Count -eq 0) {
