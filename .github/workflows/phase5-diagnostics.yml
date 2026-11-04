@@ -42,6 +42,9 @@ jobs:
 
           schema = json.loads(Path("schemas/diagnostic-event-v1.schema.json").read_text(encoding="utf-8"))
           Draft202012Validator.check_schema(schema)
+          event_code_schema = schema["properties"]["event_code"]
+          if event_code_schema.get("not") != {} or "enum" in event_code_schema:
+              raise SystemExit("Unapproved event-code registry must use a valid always-rejecting schema.")
           sample = {
               "schema_version": 1,
               "timestamp_utc": "2026-11-04T20:00:00Z",
