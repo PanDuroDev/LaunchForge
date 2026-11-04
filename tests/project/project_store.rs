@@ -15,10 +15,7 @@ fn repository_path(relative: &str) -> PathBuf {
 }
 
 fn store() -> ProjectStore {
-    ProjectStore::with_schema_json(
-        &fs::read_to_string(repository_path("poc/contracts/project-v1.schema.json")).unwrap(),
-    )
-    .unwrap()
+    ProjectStore::new().unwrap()
 }
 
 fn sample_project() -> Value {
@@ -46,11 +43,11 @@ fn sample_fixture_passes_schema_and_semantic_validation() {
         .parse_json(&serde_json::to_string(&sample_project()).unwrap())
         .unwrap();
 
-    assert_eq!(project.name(), "LaunchForge Sample");
-    assert_eq!(project.schema_version(), PROJECT_SCHEMA_VERSION);
+    assert_eq!(project.name(), Some("LaunchForge Sample"));
+    assert_eq!(project.schema_version(), Some(PROJECT_SCHEMA_VERSION));
     assert_eq!(
         project.project_id(),
-        "11111111-1111-4111-8111-111111111111"
+        Some("11111111-1111-4111-8111-111111111111")
     );
 }
 
@@ -61,7 +58,7 @@ fn create_save_open_round_trip_preserves_project_and_entity_ids() {
     let path = directory.path().join("my-launcher.lfproject");
 
     let created = store.create("My Launcher").unwrap();
-    let original_id = created.project_id().to_owned();
+    let original_id = created.project_id().unwrap().to_owned();
     let original_root_id = created.as_value()["components"][0]["id"]
         .as_str()
         .unwrap()
@@ -71,7 +68,7 @@ fn create_save_open_round_trip_preserves_project_and_entity_ids() {
     let opened = store.open(&path).unwrap();
 
     assert_eq!(opened.as_value(), created.as_value());
-    assert_eq!(opened.project_id(), original_id);
+    assert_eq!(opened.project_id(), Some(original_id.as_str()));
     assert_eq!(
         opened.as_value()["components"][0]["id"].as_str().unwrap(),
         original_root_id.as_str()
@@ -90,7 +87,7 @@ fn new_projects_receive_unique_uuid_v4_ids_and_a_valid_empty_root() {
     let second = store.create("Second").unwrap();
 
     assert_ne!(first.project_id(), second.project_id());
-    assert_eq!(Uuid::parse_str(first.project_id()).unwrap().get_version(), Some(uuid::Version::Random));
+    assert_eq!(Uuid::parse_str(first.project_id().unwrap()).unwrap().get_version(), Some(uuid::Version::Random));
     assert_eq!(first.as_value()["assets"].as_array().unwrap().len(), 1);
     assert_eq!(first.as_value()["assets"][0]["kind"], "applicationIcon");
     assert_eq!(first.as_value()["assets"][0]["path"], "assets/launcher-icon.ico");
@@ -98,6 +95,20 @@ fn new_projects_receive_unique_uuid_v4_ids_and_a_valid_empty_root() {
     assert_eq!(first.as_value()["games"], json!([]));
     assert_eq!(first.as_value()["components"][0]["type"], "container");
     assert_eq!(first.as_value()["components"][0]["children"], json!([]));
+}
+
+#[test]
+fn document_accessors_do_not_panic_after_invalid_mutation() {
+    let store = store();
+    let mut document = store.create("Mutable").unwrap();
+
+    document.as_value_mut()["projectId"] = json!(true);
+    document.as_value_mut()["name"] = json!(42);
+    document.as_value_mut()["schemaVersion"] = json!(1.0);
+
+    assert_eq!(document.project_id(), None);
+    assert_eq!(document.name(), None);
+    assert_eq!(document.schema_version(), None);
 }
 
 #[test]
