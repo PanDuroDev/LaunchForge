@@ -71,6 +71,22 @@ class ConformanceCatalogTests(unittest.TestCase):
             },
         )
 
+    def test_catalog_tracks_uuid_and_application_icon_contract_edges(self):
+        """Keep current Phase 0 schema-consistency gaps represented as planned cases."""
+        cases = {case["test_id"]: case for case in self.catalog["cases"]}
+        uuid_case = cases["LF-COMPAT-007"]
+        icon_case = cases["LF-COMPAT-008"]
+
+        self.assertEqual(uuid_case["category"], "project-format")
+        self.assertEqual(uuid_case["lifecycle"], "planned")
+        self.assertIn("phase0:project-format", uuid_case["contract_dependencies"])
+        self.assertIn("UUID canonicalization", uuid_case["expected_behavior"])
+
+        self.assertEqual(icon_case["category"], "project-format")
+        self.assertEqual(icon_case["lifecycle"], "planned")
+        self.assertIn("phase0:filesystem-security-policy", icon_case["contract_dependencies"])
+        self.assertIn("packaged resource bytes", icon_case["expected_behavior"])
+
     def test_dependency_registry_matches_case_references(self):
         """Require a unique registry containing every and only referenced dependency."""
         referenced = {
