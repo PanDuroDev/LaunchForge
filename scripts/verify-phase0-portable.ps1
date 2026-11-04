@@ -303,7 +303,7 @@ try {
             if ($hasInvalidFilenameCharacter -or -not $firstIsAlphanumeric -or -not $lastIsPortable) {
                 throw "The asset manifest contains a non-portable Windows filename."
             }
-            $assetStem = [IO.Path]::GetFileNameWithoutExtension($assetFileName).ToUpperInvariant()
+            $assetStem = $assetFileName.Split(".")[0].ToUpperInvariant()
             if ($assetStem -in @("CON", "PRN", "AUX", "NUL", "COM1", "COM2", "COM3", "COM4", "COM5", "COM6", "COM7", "COM8", "COM9", "LPT1", "LPT2", "LPT3", "LPT4", "LPT5", "LPT6", "LPT7", "LPT8", "LPT9")) {
                 throw "The asset manifest contains a reserved Windows device filename."
             }
