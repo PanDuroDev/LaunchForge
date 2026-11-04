@@ -37,12 +37,14 @@ jobs:
           duplicates = sorted({item for item in ids if ids.count(item) > 1})
           if duplicates:
               raise SystemExit(f"Duplicate conformance IDs: {duplicates}")
-          required_ids = {"TUF-010A", "TUF-010B", "TUF-010C", "TUF-015", "TUF-016", "REL-008", "REL-009"}
+          required_ids = {"TUF-010A", "TUF-010B", "TUF-010C", "TUF-015", "TUF-016", "REL-008", "REL-009", "REL-010"}
           missing = sorted(required_ids - set(ids))
           if missing:
               raise SystemExit(f"Missing trust/release coverage: {missing}")
           required_text = (
               "product/channel/platform/architecture/application version",
+              "custom.launchforge",
+              "Targets custom metadata schema and POUF",
               "Accepted version-to-target binding is missing or corrupt",
               "do not reconstruct from remote metadata",
           )
