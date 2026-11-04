@@ -817,15 +817,20 @@ Do not optimize around download counts or marketplace activity before the core a
 
 The following decisions are the working baseline for initial development:
 
-- Product category: visual game-launcher development platform.
+- Product category: visual game-launcher development platform, not a game store or generic website builder.
 - Initial platform: Windows desktop.
 - Primary user: indie developers and small studios.
-- Main differentiator: visual editor with real-time preview and independent application export.
+- Main differentiator: visual authoring, real-time preview, and export of an independent branded launcher.
 - Multiple launchers: separate Launcher Projects managed by one Studio.
-- Runtime: shared codebase, bundled with each exported launcher initially.
-- Data: API/JSON-first, with guided visual mapping.
-- Game management: optional subsystem, not mandatory for every project.
-- Custom code: advanced extension path, not required for the MVP.
-- No marketplace, social network, game store, or LaunchForge-hosted game infrastructure in the MVP.
+- Project model: one versioned, renderer-neutral schema with explicit component and capability contracts.
+- Renderer selection: selected at build/export time; a project may target multiple renderers only when all used features are supported by each target.
+- Technology direction: TypeScript/React for Studio UI and Rust for the shared host/Runtime core are the leading candidates; Tauri is the first host/renderer PoC candidate, with WebView2/.NET as a serious Windows-first alternative. This remains provisional until Phase 0 evidence is reviewed.
+- Runtime distribution: shared codebase, bundled with each exported launcher initially.
+- MVP: a narrow end-to-end Windows workflow with a small component set and one locally configured game entry. It does not require remote APIs or managed game downloads.
+- Data: API/JSON-first, introduced after the MVP with typed bindings and bounded networking.
+- Game management: optional subsystem, introduced after the standalone MVP and implemented with strict path and integrity guarantees.
+- Launcher self-updates: separate from game updates and deferred until signed metadata, trust bootstrap, and recovery behavior are proven.
+- Custom code: permissioned extension path only after the core product is stable; no arbitrary scripts in the MVP.
+- No marketplace, social network, game store, LaunchForge-hosted game infrastructure, cloud collaboration, or multi-platform promise in the MVP.
 
-This document defines product intent and scope. It does not prescribe a final technology stack or claim that the architecture has been technically validated.
+Technology choices and performance thresholds are not claimed as final until Phase 0 PoCs and clean-machine tests are complete. This document defines product intent, provisional architecture direction, and measurable decision gates.
