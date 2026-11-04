@@ -257,6 +257,26 @@ fn semantic_validation_requires_a_typed_application_icon_asset() {
 }
 
 #[test]
+fn semantic_validation_rejects_non_image_assets_for_image_and_game_covers() {
+    let store = store();
+    let mut image_component = sample_project();
+    let application_icon_id = image_component["assets"][1]["id"].clone();
+    image_component["components"][0]["children"][1]["props"]["assetId"] =
+        application_icon_id.clone();
+    expect_validation_code(
+        store.validator().validate(&image_component).unwrap_err(),
+        "INVALID_ASSET_KIND",
+    );
+
+    let mut game_cover = sample_project();
+    game_cover["games"][0]["coverAssetId"] = application_icon_id;
+    expect_validation_code(
+        store.validator().validate(&game_cover).unwrap_err(),
+        "INVALID_ASSET_KIND",
+    );
+}
+
+#[test]
 fn semantic_validation_rejects_missing_asset_and_game_references() {
     let store = store();
 
