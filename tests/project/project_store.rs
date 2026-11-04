@@ -150,7 +150,7 @@ fn schema_rejects_unknown_fields_and_reports_unsupported_versions() {
         "SCHEMA_VALIDATION_FAILED",
     );
 
-    for unsupported_version in [json!(0), json!(2)] {
+    for unsupported_version in [json!(0), json!(2), json!(-1), json!(1.0)] {
         let mut project = sample_project();
         project["schemaVersion"] = unsupported_version;
         expect_validation_code(
