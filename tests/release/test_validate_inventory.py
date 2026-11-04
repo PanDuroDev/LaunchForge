@@ -194,6 +194,20 @@ class PublisherInventoryTests(unittest.TestCase):
         )
         self.assert_invalid("stable releases must contain only signed artifacts")
 
+    def test_rejects_unsigned_override_for_signed_stable_inventory(self) -> None:
+        with self.assertRaisesRegex(ValidationError, "--allow-unsigned"):
+            validate_inventory(self.root, allow_unsigned=True)
+
+    def test_rejects_not_applicable_installer_on_preview_channel(self) -> None:
+        self.inventory["channel"] = "preview"
+        self.inventory["version"] = "1.2.3-preview.1"
+        signing = self.inventory["artifacts"][0]["signing"]
+        signing.update(
+            status="not-applicable", subject=None, certificate_thumbprint=None,
+            timestamped=False, reason="installer signing is never exempt"
+        )
+        self.assert_invalid("installer artifacts must not use the not-applicable")
+
     def test_cli_handles_extremely_large_json_integer_without_traceback(self) -> None:
         raw = (self.root / "publisher-artifacts.v1.json").read_text(encoding="utf-8")
         raw = raw.replace(
