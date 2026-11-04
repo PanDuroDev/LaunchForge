@@ -43,19 +43,23 @@ jobs:
           missing = sorted(required_ids - set(ids))
           if missing:
               raise SystemExit(f"Missing trust/release coverage: {missing}")
-          required_text = (
+          required_matrix_text = (
               "product/channel/platform/architecture/application version",
               "persist each cryptographically verified Root hop",
-              "persisted Root before the final Root expiry check",
-              "custom.launchforge",
-              "Targets custom metadata schema and POUF",
               "Accepted version-to-target binding is missing or corrupt",
               "do not reconstruct from remote metadata",
           )
-          for phrase in required_text:
+          for phrase in required_matrix_text:
               if phrase not in matrix:
                   raise SystemExit(f"Missing required matrix assertion: {phrase}")
-          if "never reconstruct historical bindings from the current remote repository" not in proposal:
-              raise SystemExit("Proposal must forbid reconstructing lost release bindings from remote metadata.")
+          required_proposal_text = (
+              "custom.launchforge",
+              "Targets custom metadata schema and POUF",
+              "persists every verified Root hop before it reaches the final Root expiry check",
+              "never reconstruct historical bindings from the current remote repository",
+          )
+          for phrase in required_proposal_text:
+              if phrase not in proposal:
+                  raise SystemExit(f"Missing required proposal assertion: {phrase}")
           print(f"Validated {len(ids)} unique updater conformance cases.")
           PY
