@@ -94,7 +94,33 @@ Required behavior:
 
 A digest alone is not publisher authentication. TUF's role signatures authenticate target metadata and bind artifact hashes/sizes to a trusted role. TLS protects the transport but does not replace signed metadata.
 
-The TUF specification's client workflow requires monotonically increasing metadata versions, expiry checks, threshold signature verification, and Targets/Snapshot hash binding. See [Timestamp rollback/freeze checks](https://github.com/theupdateframework/specification/blob/master/tuf-spec.md#update-timestamp), [Targets/Snapshot binding](https://github.com/theupdateframework/specification/blob/master/tuf-spec.md#update-targets), and [TUF's security goals](https://github.com/theupdateframework/specification/blob/master/tuf-spec.md#goals-to-protect-against-specific-attacks).
+The TUF specification's client workflow requires monotonically increasing metadata versions, expiry checks, threshold signature verification, and Targets/Snapshot hash binding. See the [pinned TUF v1.0.36 specification](https://theupdateframework.github.io/specification/v1.0.36/).
+
+### Application-specific target metadata (POUF proposal)
+
+TUF's Targets role signs the target metadata, including its opaque application-defined `custom` object. The framework does not interpret those custom fields; LaunchForge must define and validate them as its POUF before implementation. The proposed namespace is `custom.launchforge` with this minimum identity contract:
+
+```json
+{
+  "schema_version": 1,
+  "product_id": "com.example.launcher",
+  "channel": "stable",
+  "application_version": "1.2.3",
+  "platform": "windows",
+  "architecture": "x64",
+  "package_type": "installer",
+  "minimum_bootstrapper_version": "1.0.0",
+  "runtime_compatibility": {
+    "minimum": "1.0.0",
+    "maximum_exclusive": "2.0.0"
+  },
+  "release_id": "com.example.launcher/stable/windows-x64/1.2.3"
+}
+```
+
+This is an illustrative proposal, not a frozen schema. The approved POUF must define exact required/optional fields, SemVer and range semantics, supported enum values, unknown-field behavior, platform/architecture mapping, and migration rules. The client must validate this signed identity against the locally pinned installation before downloading or staging. It must additionally bind each accepted release identity to the exact TUF target path, length and digest; a `release_id` does not replace that byte-level binding. Do not trust identity fields from an unsigned sidecar, URL, filename, or game-delivery manifest.
+
+The custom object and the TUF target's path/length/hash are both covered by the trusted Targets metadata. The client must use the selected TUF library's canonicalization and signature-verification implementation rather than parsing or re-signing these fields itself. See the [TUF v1.0.36 Targets format](https://theupdateframework.github.io/specification/v1.0.36/).
 
 ## 5. Version and channel policy
 
@@ -158,7 +184,7 @@ This is a proposed state model only. The active-slot representation, bootstrappe
 
 ## 8. Durable state and diagnostics
 
-Persist, per repository identity, the trusted Root and TUF role metadata/version state, the accepted repository identity, and the highest accepted launcher release version for each product/channel/platform tuple. Persist update journal state separately from trusted metadata state.
+Persist, per repository identity, the trusted Root and TUF role metadata/version state, the accepted repository identity, and the highest accepted launcher release version and immutable target binding for each product/channel/platform/architecture tuple. Persist update journal state separately from trusted metadata state.
 
 State writes must be atomic and corruption-detecting. If state is missing, malformed, inconsistent, or cannot be authenticated, do not silently recreate it from remote metadata. Require a documented re-bootstrap/recovery route using the original trusted installer or another out-of-band approved channel. A reset is a security-sensitive action and must be auditable.
 
@@ -175,6 +201,7 @@ See [LAUNCHER_UPDATE_CONFORMANCE_MATRIX.md](LAUNCHER_UPDATE_CONFORMANCE_MATRIX.m
 | Runtime/build/package format, version/architecture fields, bundled bootstrapper layout | Phase 0/1 architecture and build owners | Target selection and staged replacement depend on real package structure |
 | Windows baseline, per-user install root, ACL/reparse-point policy | Phase 0 filesystem/security owner | Determines safe storage, helper permissions and path checks |
 | TUF library/language and supported algorithms/spec version | Phase 0 architecture owner | Avoids an unreviewed cryptographic/parser implementation |
+| Targets custom metadata schema and POUF (product/channel/version/platform/architecture/package/runtime compatibility/release ID) | Phase 0/1 architecture and updater integration owners | Defines the signed application identity the client must validate before download/staging |
 | Root bootstrap distribution and publisher identity validation | Security/integration owner | Defines initial trust and first-install authenticity |
 | Role thresholds, custodians, HSM/key service and revocation response | Publisher/security owner | Threshold values must match real key operations and recovery |
 | Product/channel identity and SemVer/metadata version state | Product/integration owner | Prevents cross-channel substitution and downgrade ambiguity |
