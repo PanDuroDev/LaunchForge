@@ -179,3 +179,25 @@ The integration owner should attach or link the following reviewed artifacts bef
 6. User evidence supporting exactly one Phase 6 candidate track.
 
 The contract-neutral conformance protocol is documented in `docs/phase6/CONFORMANCE_PLAN.md`, the case-to-candidate-contract mapping in `docs/phase6/CONTRACT_TRACEABILITY.md`, and the ordered prerequisite work in `docs/phase6/NEXT_HANDOFF.md`. Until the required contracts, fixtures, implementations, and reviews exist, the Phase 6 deliverable remains a readiness/protocol handoff. It intentionally adds no product feature, public API, project schema, or platform-support promise.
+
+
+## Revalidation update — 2026-11-05
+
+This section is the current status and supersedes older 2026-11-04 workflow observations above.
+
+### 6.1 compatibility/conformance preparation
+
+The catalog now records **41 planned cases** in eight areas, with 40 unique dependency labels and 16 metadata unit tests. Five new planned cases cover UUID contract consistency (`LF-COMPAT-007`), application-icon reference/package preservation (`LF-COMPAT-008`), typed JSON mapping (`LF-CAP-006`), DNS/IP egress controls (`LF-SEC-006`) and portable Windows package preflight (`LF-PKG-006`). All remain planned; no product adapter or support claim is inferred from catalog validation.
+
+### Current dependency evidence
+
+- **Phase 0 PR #16:** latest Windows hosted run [#41924747295](https://github.com/PanDuroDev/LaunchForge/actions/runs/41924747295) passed through locked Tauri build, host smoke, portable package and artifact upload. PR remains open/unmerged and candidate contracts await review. Fresh-user Windows/WebView2, renderer parity, DPI/accessibility/RTL and performance evidence remain outstanding.
+- **Phase 0 verifier PR #23:** latest run [#41926599380](https://github.com/PanDuroDev/LaunchForge/actions/runs/41926599380) failed in the package-verifier fixture step, despite an earlier passing run. The open PR has review findings; fresh-user clean-VM acceptance has not been recorded.
+- **Phase 1 PR #22:** draft P1-A project foundation; Rust test suite not run. The Phase 0 workflow is not a P1-A validation result.
+- **Phase 3 PR #21:** Stage 3.1 bounded HTTPS JSON transport and typed mapping prototype merged. Runtime/Studio integration, DNS/IP egress enforcement and preview/export parity remain unproven.
+- **Phase 4 PR #25:** POSIX-only transaction/lifecycle prototype; no Windows/NTFS backend or native Runtime integration.
+- **Phase 5:** PR #14 and #18 merged, but #18's production decision remains **FAIL / NO-GO**. PR #15 remains a TUF design proposal, not an updater implementation.
+
+### Current decision
+
+Keep the Studio and exported Launcher support rows at **not verified**. Do not announce extension, renderer, OS or integration support. Phase 6.2 still lacks a defensible single-track user-demand record and named maintainer; Phase 6.3 cannot start before that decision. Continue only with 6.1 traceability and contract-neutral conformance preparation until the owners above close their gates.
