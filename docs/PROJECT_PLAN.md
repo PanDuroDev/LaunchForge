@@ -279,7 +279,19 @@ Studio project management should support:
 
 A public template marketplace is not part of the initial scope.
 
-### 6.9 Preview, testing, and export
+### 6.9 Application shell and window behavior
+
+A branded launcher is more than the content inside its viewport. Project settings should expose the supported desktop application shell:
+
+- Window title, icon, default size, minimum size, and resizability.
+- Supported window modes and startup behavior.
+- Native title bar versus a custom title bar, where the selected framework permits it.
+- Minimize, maximize, close, and window-drag behavior when using a custom title bar.
+- Optional tray behavior only if it is needed by real launcher workflows.
+
+These settings must be constrained by the runtime and operating system. Do not promise arbitrary native-window customization through the visual component editor.
+
+### 6.10 Preview, testing, and export
 
 The preview should use the same rendering and component behavior as the exported runtime wherever practical. Avoid maintaining two separate implementations that drift apart.
 
@@ -292,6 +304,8 @@ Provide:
 - Action/event testing.
 - Game workflow testing with safe test fixtures.
 - Build validation and actionable error messages.
+
+The preview and runtime should also support useful diagnostics: structured logs, connection/action errors, and a way to copy a sanitized diagnostic report. Project editing should include autosave or reliable recovery after an unexpected Studio shutdown.
 
 Build outputs should include:
 
@@ -441,7 +455,42 @@ A small game install/launch proof-of-concept can be built as a separate technica
 - More components and data adapters.
 - Additional operating systems only after the Windows workflow is stable.
 
-## 12. Risks and unresolved decisions
+## 12. Operational requirements and integration contract
+
+A launcher is a distributed desktop application, so the product plan must cover its behavior after it leaves the developer's machine.
+
+### Studio responsibilities
+
+- Validate project structure, component properties, data bindings, and required capabilities before building.
+- Save projects safely and provide recovery from interrupted editing sessions.
+- Report missing assets, invalid connections, unsupported actions, and runtime incompatibilities.
+- Produce reproducible build metadata, including project schema and runtime versions.
+
+### Launcher responsibilities
+
+- Handle unavailable APIs, slow networks, missing assets, and malformed responses without crashing.
+- Use cache policies and sensible fallbacks for remote artwork and content.
+- Show loading, empty, offline, and error states instead of silently rendering broken UI.
+- Keep logs useful but avoid recording credentials or private user data.
+- Clearly distinguish launcher updates from game updates.
+
+### Developer-owned services
+
+LaunchForge should define documented contracts, not operate every studio's backend.
+
+A developer remains responsible for hosting their API, content, game files, and update manifests. LaunchForge may provide examples and local test fixtures, but a hosted backend, CDN, account system, or analytics service is not required by the product.
+
+Document the minimum API/data contract for game metadata, content, and (later) game release manifests. The contract should define versioning, hashes, file URLs, authentication expectations, and error responses before the full downloader is implemented.
+
+### Accessibility and localization
+
+- Support keyboard navigation and visible focus states in Studio and exported launchers.
+- Avoid hard-coded text in layouts; use project-managed strings.
+- Support Unicode and locale-aware formatting.
+- Plan for right-to-left layout and text direction, including mirrored navigation and directional icons.
+- Do not treat translation as a simple string replacement when layout direction changes.
+
+## 13. Risks and unresolved decisions
 
 These decisions must be answered through prototypes, not guesses.
 
@@ -457,7 +506,7 @@ These decisions must be answered through prototypes, not guesses.
 | What does "custom code" mean? | Unrestricted scripts create security and support problems. | Defer it until a permissioned extension API exists. |
 | How are builds signed? | Windows trust and distribution experience depend on signing. | Document signing as a release requirement; do not assume a certificate is available for development. |
 
-## 13. Success criteria
+## 14. Success criteria
 
 Measure whether LaunchForge reduces the work required to create and maintain a branded launcher.
 
@@ -473,7 +522,7 @@ For the MVP, track:
 
 Do not optimize around download counts or marketplace activity before the core authoring workflow works.
 
-## 14. Current scope decisions
+## 15. Current scope decisions
 
 The following decisions are the working baseline for initial development:
 
