@@ -73,7 +73,7 @@ fn create_save_open_round_trip_preserves_project_and_entity_ids() {
     assert_eq!(opened.as_value(), created.as_value());
     assert_eq!(opened.project_id(), original_id);
     assert_eq!(
-        opened.as_value()["components"][0]["id"],
+        opened.as_value()["components"][0]["id"].as_str().unwrap(),
         original_root_id
     );
 
@@ -91,8 +91,8 @@ fn new_projects_receive_unique_uuid_v4_ids_and_a_valid_empty_root() {
 
     assert_ne!(first.project_id(), second.project_id());
     assert_eq!(
-        Uuid::parse_str(first.project_id()).unwrap().get_version_num(),
-        4
+        Uuid::parse_str(first.project_id()).unwrap().get_version(),
+        Some(uuid::Version::Random)
     );
     assert_eq!(first.as_value()["assets"], json!([]));
     assert_eq!(first.as_value()["games"], json!([]));
@@ -174,7 +174,8 @@ fn schema_rejects_invalid_component_properties() {
 fn semantic_validation_rejects_duplicate_ids_across_entity_types() {
     let store = store();
     let mut project = sample_project();
-    project["games"][0]["id"] = project["assets"][0]["id"].clone();
+    let asset_id = project["assets"][0]["id"].clone();
+    project["games"][0]["id"] = asset_id;
 
     expect_validation_code(
         store.validator().validate(&project).unwrap_err(),
