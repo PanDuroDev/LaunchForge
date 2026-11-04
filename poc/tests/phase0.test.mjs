@@ -7,6 +7,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { parseProjectText, validateAssetPath, validateProject, ProjectValidationError } from "../shared/contract.mjs";
 import { mountProject, renderProjectMarkup } from "../shared/renderer.mjs";
+import { validateWindowsIcon, REQUIRED_WINDOWS_ICO_SIZES } from "../scripts/lib/windows-icon.mjs";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const fixtureText = await readFile(path.join(root, "fixtures/sample-project.json"), "utf8");
@@ -27,6 +28,37 @@ test("sample project validates as schema v1", () => {
 test("project parser rejects malformed JSON and oversized inputs", () => {
   expectCode(() => parseProjectText("{"), "INVALID_JSON");
   expectCode(() => parseProjectText(" ".repeat(1024 * 1024 + 1)), "PROJECT_TOO_LARGE");
+});
+
+test("project requires a dedicated applicationIcon asset reference", () => {
+  const missing = structuredClone(fixture);
+  delete missing.window.iconAssetId;
+  expectCode(() => validateProject(missing), "MISSING_FIELD");
+
+  const wrongKind = structuredClone(fixture);
+  wrongKind.window.iconAssetId = wrongKind.assets.find((asset) => asset.kind === "image").id;
+  expectCode(() => validateProject(wrongKind), "INVALID_APP_ICON");
+
+  const wrongPath = structuredClone(fixture);
+  const icon = wrongPath.assets.find((asset) => asset.id === wrongPath.window.iconAssetId);
+  icon.path = "assets/launcher-icon.png";
+  expectCode(() => validateProject(wrongPath), "INVALID_APP_ICON_PATH");
+});
+
+test("application ICO contains every required Windows icon layer", async () => {
+  const asset = fixture.assets.find((entry) => entry.id === fixture.window.iconAssetId);
+  const bytes = await readFile(path.join(root, asset.path));
+  assert.equal(validateWindowsIcon(bytes), true);
+  assert.deepEqual([...REQUIRED_WINDOWS_ICO_SIZES], [16, 24, 32, 48, 64, 256]);
+  assert.throws(() => validateWindowsIcon(bytes.subarray(0, bytes.length - 1)));
+});
+
+test("Tauri receives the exact application icon asset referenced by the project", async () => {
+  const result = spawnSync(process.execPath, [path.join(root, "scripts/prepare-tauri-icon.mjs")], { encoding: "utf8" });
+  assert.equal(result.status, 0, result.stderr || result.stdout);
+  const source = await readFile(path.join(root, "assets/launcher-icon.ico"));
+  const staged = await readFile(path.join(root, "src-tauri/icons/icon.ico"));
+  assert.equal(hash(source), hash(staged));
 });
 
 test("unknown schema versions fail closed", () => {
@@ -101,6 +133,12 @@ test("preview and exported package use byte-identical renderer and project contr
   assert.ok(distFiles.includes("index.html"));
   assert.ok(distFiles.includes("runtime.mjs"));
   assert.ok(distFiles.includes("BUILD-METADATA.json"));
+  const exportedIcon = await readFile(path.join(root, "dist/assets/launcher-icon.ico"));
+  const sourceIcon = await readFile(path.join(root, "assets/launcher-icon.ico"));
+  assert.equal(hash(exportedIcon), hash(sourceIcon));
+  const metadata = JSON.parse(await readFile(path.join(root, "dist/BUILD-METADATA.json"), "utf8"));
+  assert.equal(metadata.applicationIconAssetId, fixture.window.iconAssetId);
+  assert.equal(metadata.applicationIconSha256, hash(sourceIcon));
 });
 
 

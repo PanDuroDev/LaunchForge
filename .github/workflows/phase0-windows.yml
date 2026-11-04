@@ -36,7 +36,10 @@ jobs:
         shell: pwsh
         run: node .\poc\scripts\build-export.mjs
 
-      # Windows requires the checked-in icons/icon.ico for its native resource file.
+      - name: Resolve and validate the project application icon
+        shell: pwsh
+        run: node .\\poc\\scripts\\prepare-tauri-icon.mjs
+
       - name: Generate and verify Rust lockfile
         shell: pwsh
         run: |

@@ -15,9 +15,9 @@ Top-level fields:
 | `schemaVersion` | Integer exactly `1` for this contract |
 | `projectId` | Stable UUIDv4, generated once and retained across edits/exports |
 | `name` | User-facing project name, 1–80 characters |
-| `window` | Title, default/minimum dimensions, and resizable flag; validated bounds are in schema v1 |
+| `window` | Title, required `iconAssetId`, default/minimum dimensions, and resizable flag; validated bounds are in schema v1 |
 | `theme` | Three named color tokens: `surface`, `text`, `accent`; RGB hex only |
-| `assets` | Stable asset ID, kind, and portable relative project path |
+| `assets` | Stable asset ID, kind (`image` or `applicationIcon`), and portable relative project path |
 | `games` | Local game metadata with stable ID and `coverAssetId` reference |
 | `components` | Exactly one root container in v1; child tree is capped and typed |
 
@@ -32,6 +32,16 @@ The schema is intentionally constrained. Schema v1 supports `container`, `text`,
 - Asset paths are relative to the project root and use `/` separators. Schema v1 accepts one filename under `assets/` only. Absolute paths, drive/UNC/device paths, `..`, backslashes, ADS syntax, encoded separators, and reserved Windows device names are rejected.
 - A lexical path check is not sufficient at runtime. The Rust host must canonicalize the final destination immediately before access and reject symlink, junction, or reparse-point escapes from the authorized project/install root.
 - Export records the resolved asset inventory and SHA-256 values in build metadata. The main project document does not embed binary assets.
+
+### Application icon contract
+
+- `window.iconAssetId` is required and must reference one project asset whose kind is exactly `applicationIcon`. It is a stable UUID reference, not a user-supplied path.
+- An `applicationIcon` asset must use one plain project-relative filename under `assets/` with a lowercase `.ico` extension. An ordinary `image` asset cannot be used as the application icon.
+- The Windows ICO must contain 16, 24, 32, 48, 64, and 256 pixel image entries. The build validates the ICO directory and each entry's bounds before native compilation. This follows Tauri's [Windows icon requirements](https://v2.tauri.app/develop/icons/).
+- The Windows build resolves the asset ID from the validated project, canonicalizes its path under the project assets root, and stages those exact bytes as `src-tauri/icons/icon.ico`. Tauri embeds that resource into the portable executable; the launcher does not depend on a separate icon file at runtime.
+- Build metadata records `applicationIconAssetId` and `applicationIconSha256`. The icon is also included in `assetManifestSha256`. A missing, malformed, or non-`applicationIcon` reference blocks export.
+
+This is a pre-approval completion of the v1 candidate, not a migration of released data. No project schema has been accepted or shipped yet. Once this v1 contract is approved, changing the icon field or its required file format is a breaking schema change and requires an explicit migration/version proposal.
 
 ## 3. Component and layout contract
 
@@ -103,11 +113,13 @@ interface BuildResultV1 {
   rendererId: string;
   rendererContractVersion: 1;
   assetManifestSha256: string;
+  applicationIconAssetId: string;
+  applicationIconSha256: string;
   diagnostics: Diagnostic[];
 }
 ```
 
-The initial distribution format is **portable** for the MVP spike; do not add an installer until the portable package is stable. The actual Windows package format is not validated by the browser-only PoC. Export must validate the project, resolve the complete asset set, scan for prohibited secrets, verify target capabilities, copy the shared renderer/runtime, and write deterministic metadata. A failure in any security-critical step blocks export.
+The build request deliberately does not duplicate the icon path or ID: it resolves the single source of truth through `projectPath` → `window.iconAssetId`. `BuildResultV1` returns the resolved icon asset ID and SHA-256 so the embedded Windows resource can be audited against the project. The initial distribution format is **portable** for the MVP spike; do not add an installer until the portable package is stable. The actual Windows package format is not validated by the browser-only PoC. Export must validate the project, resolve the complete asset set, scan for prohibited secrets, verify target capabilities, copy the shared renderer/runtime, and write deterministic metadata. A failure in any security-critical step blocks export.
 
 ## 7. Versioning and migration policy
 

@@ -51,9 +51,9 @@ export function validateProject(project) {
   if (project.schemaVersion !== PROJECT_SCHEMA_VERSION) fail("UNSUPPORTED_SCHEMA_VERSION", `Only schema version ${PROJECT_SCHEMA_VERSION} is supported`, "$.schemaVersion");
   uuid(project.projectId, "$.projectId"); str(project.name, "$.name", 80);
 
-  const w = project.window, wk = ["title", "width", "height", "minWidth", "minHeight", "resizable"];
+  const w = project.window, wk = ["title", "iconAssetId", "width", "height", "minWidth", "minHeight", "resizable"];
   if (!record(w)) fail("INVALID_WINDOW", "Window settings are required", "$.window");
-  keys(w, wk, wk, "$.window"); str(w.title, "$.window.title", 80);
+  keys(w, wk, wk, "$.window"); str(w.title, "$.window.title", 80); uuid(w.iconAssetId, "$.window.iconAssetId");
   integer(w.width, "$.window.width", 320, 4096); integer(w.height, "$.window.height", 240, 2160);
   integer(w.minWidth, "$.window.minWidth", 320, w.width); integer(w.minHeight, "$.window.minHeight", 240, w.height);
   if (typeof w.resizable !== "boolean") fail("INVALID_WINDOW", "resizable must be boolean", "$.window.resizable");
@@ -71,11 +71,16 @@ export function validateProject(project) {
     if (!record(a)) fail("INVALID_ASSET", "Asset must be an object", p);
     keys(a, ["id", "kind", "path"], ["id", "kind", "path"], p); uuid(a.id, `${p}.id`);
     if (ids.has(a.id)) fail("DUPLICATE_ID", "Entity IDs must be unique", `${p}.id`); ids.add(a.id);
-    if (a.kind !== "image") fail("UNSUPPORTED_ASSET_KIND", "Only image assets are supported", `${p}.kind`);
+    if (!["image", "applicationIcon"].includes(a.kind)) fail("UNSUPPORTED_ASSET_KIND", "Only image and applicationIcon assets are supported", `${p}.kind`);
     validateAssetPath(a.path, `${p}.path`);
+    if (a.kind === "applicationIcon" && !a.path.endsWith(".ico")) fail("INVALID_APP_ICON_PATH", "Application icon assets must use a lowercase .ico file", `${p}.path`);
+    if (a.kind === "image" && a.path.toLowerCase().endsWith(".ico")) fail("INVALID_ASSET_KIND", "ICO files must use kind applicationIcon", `${p}.kind`);
     if (assetPaths.has(a.path)) fail("DUPLICATE_ASSET_PATH", "Asset paths must be unique", `${p}.path`);
     assetPaths.add(a.path); assets.set(a.id, a);
   }
+  const appIcon = assets.get(w.iconAssetId);
+  if (!appIcon) fail("MISSING_APP_ICON", "window.iconAssetId must reference a project asset", "$.window.iconAssetId");
+  if (appIcon.kind !== "applicationIcon") fail("INVALID_APP_ICON", "window.iconAssetId must reference an applicationIcon asset", "$.window.iconAssetId");
   const games = new Map();
   for (const [i, g] of project.games.entries()) {
     const p = `$.games[${i}]`, gk = ["id", "title", "description", "coverAssetId"];

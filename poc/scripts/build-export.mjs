@@ -1,11 +1,16 @@
 import { cp, mkdir, readFile, rm, writeFile } from "node:fs/promises";
 import { fileURLToPath } from "node:url";
+import { createHash } from "node:crypto";
+import { parseProjectText } from "../shared/contract.mjs";
 import path from "node:path";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const dist = path.join(root, "dist");
 const projectText = await readFile(path.join(root, "fixtures/sample-project.json"), "utf8");
-const project = JSON.parse(projectText);
+const project = parseProjectText(projectText);
+const appIconAsset = project.assets.find((asset) => asset.id === project.window.iconAssetId);
+const appIconBytes = await readFile(path.join(root, appIconAsset.path));
+const applicationIconSha256 = createHash("sha256").update(appIconBytes).digest("hex");
 
 await rm(dist, { recursive: true, force: true });
 await mkdir(dist, { recursive: true });
@@ -20,5 +25,7 @@ await writeFile(path.join(dist, "BUILD-METADATA.json"), `${JSON.stringify({
   projectSchemaVersion: project.schemaVersion,
   renderer: "shared-dom-v1",
   projectId: project.projectId,
+  applicationIconAssetId: appIconAsset.id,
+  applicationIconSha256,
 }, null, 2)}\n`, "utf8");
 console.log(`Exported renderer fixture to ${dist}`);
