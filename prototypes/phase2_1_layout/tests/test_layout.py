@@ -154,6 +154,29 @@ class StackLayoutTests(unittest.TestCase):
         self.assertTrue(result.overflow_x)
         self.assertEqual(result.by_key("b").x, 108)
 
+    def test_fill_layout_adapts_to_documented_desktop_viewports(self):
+        for width, height in ((960, 600), (1280, 720), (1600, 900)):
+            with self.subTest(viewport=(width, height)):
+                result = layout_stack(
+                    Rect(0, 0, width, height),
+                    [
+                        LayoutChild("sidebar", AxisSpec.fixed(120), AxisSpec.fill()),
+                        LayoutChild("content", AxisSpec.fill(), AxisSpec.fill()),
+                    ],
+                    axis=Axis.HORIZONTAL,
+                    padding=Insets(16, 16, 16, 16),
+                    gap=8,
+                )
+                sidebar = result.by_key("sidebar")
+                content = result.by_key("content")
+                self.assertEqual(sidebar.x, 16)
+                self.assertEqual(sidebar.width, 120)
+                self.assertEqual(content.x, 144)
+                self.assertEqual(content.right, width - 16)
+                self.assertEqual(content.height, height - 32)
+                self.assertFalse(result.overflow_x)
+                self.assertFalse(result.overflow_y)
+
     def test_layout_is_deterministic_for_identical_logical_inputs(self):
         args = (
             Rect(3, 7, 333, 211),
