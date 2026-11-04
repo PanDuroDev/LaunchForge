@@ -30,37 +30,40 @@ A branch name or an open phase issue is not evidence that its deliverables are i
 
 ## Follow-up evidence review
 
-A follow-up review of the active work branches and pull requests on 2026-11-04 found additional preparation, but no accepted prerequisite:
+A further audit on 2026-11-04 found that Phase 0–5 preparation has advanced on separate open branches/PRs. These artifacts make 6.1 mapping more concrete, but they are not accepted contracts or completed product phases.
 
-| Work item | Newly visible evidence | Phase 6 impact |
+| Work item | Current evidence | Phase 6 impact and remaining gate |
 |---|---|---|
-| PR #9 — Phase 1 readiness | Documentation mapping Phase 1 dependencies and exit evidence; no application implementation | Helpful handoff, but project schema, Runtime and renderer contracts remain unapproved |
-| PR #10 — Phase 2 authoring specification | Detailed authoring/layout/accessibility specification; no Studio or Runtime implementation | Defines future compatibility cases, but consumes Phase 0/1 contracts that are still absent |
-| PR #12 — Phase 4.1 prototype | Proposed manifest contract and isolated Python downloader prototype; PR body reports 28 tests passing | Useful candidate fixture/contract input only; draft, unmerged, not Runtime-integrated, and explicitly not approved |
-| Phase 5.1 branch | One publisher artifact-inventory JSON Schema | Inventory is for publisher release QA; it explicitly is not an updater manifest or trust statement. No completed release process is evidenced |
-| PR #11 — this Phase 6 readiness handoff | Draft documentation PR; CodeRabbit noted that draft PRs are not automatically reviewed | Awaiting human/integration-owner review; no approval has been recorded |
+| [PR #16 — Phase 0](https://github.com/PanDuroDev/LaunchForge/pull/16) | Proposed Tauri v2/Rust + TypeScript/React candidate; Project Schema v1; renderer, Runtime-host, build and diagnostics contracts; threat model; shared DOM renderer/export POC. Its Windows Actions run has passed contract/renderer tests and standalone renderer export; Tauri host build was still in progress at inspection. | Provides concrete candidate inputs for compatibility, capability, parity and security cases. PR remains open/unmerged with no submitted review. Windows host smoke/package steps, fresh-user clean Windows VM, real WebView2 parity, DPI/accessibility and measurements are still outstanding. |
+| [PR #9 — Phase 1 readiness](https://github.com/PanDuroDev/LaunchForge/pull/9) | Readiness document plus a detailed P1-A–P1-F acceptance test plan; both are documentation/test design. | Provides project, renderer, Runtime, export and clean-Windows scenarios. No Studio/Runtime implementation or executable Phase 1 journey exists. |
+| [PR #10 — Phase 2 authoring specification](https://github.com/PanDuroDev/LaunchForge/pull/10) | Refined layout, editing, asset, import/export, accessibility, localization and compatibility requirements. | Provides future layout/RTL/DPI and preservation cases, but depends on accepted Phase 0/1 contracts and production Studio/renderer. |
+| [PR #13 — Phase 2.1 layout reference](https://github.com/PanDuroDev/LaunchForge/pull/13) | Isolated Python geometry reference; branch reports 22 tests, 4 focused regressions and 10,000 seeded property checks, while acknowledging the final 22-case suite was not re-run after its last edits. | Useful proposed behavior for layout fixtures only; not the production layout engine or renderer, and no native DPI/preview-export evidence. |
+| [PR #12 — Phase 4.1 manifest/downloader](https://github.com/PanDuroDev/LaunchForge/pull/12) | Draft Python prototype and proposed game-distribution manifest; PR reports 28 tests using mocked transport. | Useful future game-delivery adversarial cases only. Not approved or Runtime-integrated; no secure install-root transactions, Windows reparse-point installation, rollback or recovery. |
+| [PR #14 — Phase 5.1 release QA](https://github.com/PanDuroDev/LaunchForge/pull/14) | Publisher artifact-inventory schema, standard-library validator, release workflow documentation and 28 tests. | Improves artifact inventory and publisher release QA. It explicitly is not updater trust metadata and does not prove package install/update/recovery. Open/unmerged. |
+| [PR #15 — Phase 5.2 updater proposal](https://github.com/PanDuroDev/LaunchForge/pull/15) | TUF trust/recovery architecture proposal and 54-scenario conformance matrix. | Useful target cases for metadata trust, rotation, replay/rollback and transaction recovery. Documentation-only; no updater implementation or approved package/Runtime interface. Open/unmerged. |
+| PR #11 — this Phase 6 handoff | Ready for review; catalog metadata CI now passes on the current PR head. | 6.1 preparation has a reproducible catalog/test-harness gate. No product-level compatibility test is marked executed; review/approval remains pending. |
 
-The Phase 4.1 prototype reports deterministic mocked transport tests, not a live publisher integration or install/update recovery test. The proposed manifest contract defers reparse-point protection, secure install-root writes, key lifecycle, durable anti-rollback state, and Runtime lifecycle integration to later approved contracts. These gaps prevent treating Phase 4 as a stable dependency.
+Phase 0 check details: PR #16 Windows run [#41919048099](https://github.com/PanDuroDev/LaunchForge/actions/runs/41919048099) had completed the contract/renderer test and standalone export steps successfully. The Tauri Windows host build was still running; smoke-test, packaging and artifact upload were pending. This is not clean-machine acceptance and does not complete Phase 0.
 
-The Phase 5.1 artifact inventory records build provenance, package metadata, hashes, and signing status. It does not itself implement or prove clean-machine installation, publisher release publication, signed launcher update metadata, trust bootstrap/rotation/revocation, rollback, or recovery. It is also on an unmerged branch, so it is not part of the current baseline.
+The Phase 4.1 prototype uses mocked transport and still defers trusted install-root writes, reparse-point safety, key lifecycle, durable anti-rollback state, installation transactions and Runtime lifecycle integration. The Phase 5.1 inventory is a publisher QA record, not a client updater manifest. Phase 5.2 is a design proposal, not an updater. A whole-product Phase 5.3 security/diagnostics/release gate has not been accepted.
 
-**Updated gate decision:** continue with contract-neutral 6.1 preparation (this conformance protocol and the support-matrix requirements), but keep executable conformance, 6.2 track selection, and 6.3 support work blocked. Do not reinterpret work-in-progress branches or draft PRs as reviewed/accepted contracts.
+**Updated gate decision:** maintain contract-neutral 6.1 preparation and the explicit traceability map in `docs/phase6/CONTRACT_TRACEABILITY.md`. Keep product-level conformance, 6.2 selection and 6.3 support blocked until upstream contracts are reviewed/accepted, required Windows/recovery evidence passes, and maintenance ownership is named. Do not treat working branches, prototypes or green isolated tests as phase approval.
 
 ## Dependency assessment
 
 | Phase 6 prerequisite | Evidence required to pass | Current assessment |
 |---|---|---|
-| Phase 0 architecture and security contracts | Reviewed stack/renderer decision, project schema, Runtime/build interfaces, threat model, fixtures | **Not evidenced** |
-| Phase 1 project and Runtime contracts | Merged implementation, versioned project format, stable component/capability contract, preview/export parity tests | **Not evidenced** |
-| Phase 2 compatibility surface | Stable asset/layout/theme semantics and tests showing existing projects remain unchanged | **Not evidenced** |
-| Phase 3 data/action contracts | Approved binding/action API and security behavior with shared preview/Runtime fixtures | **Not evidenced** |
-| Phase 4 game-operation contract | Approved manifest/lifecycle APIs and adversarial filesystem, integrity, and recovery results | **Proposal/prototype only (PR #12); not approved or Runtime-integrated** |
-| Phase 5 release readiness | Reproducible packaging, signed/update trust and recovery evidence, diagnostics, support boundaries, reviewed release gate | **Not evidenced; unmerged branch contains artifact-inventory schema only** |
-| Schema migrations | Versioned migration chain, fixtures for every supported source version, rollback/backup behavior | **Not present** |
+| Phase 0 architecture and security contracts | Reviewed stack/renderer decision, project schema, Runtime/build interfaces, threat model, fixtures, Windows and clean-machine gates | **Candidate contracts and POC present in PR #16; approval and Windows/clean-machine evidence pending** |
+| Phase 1 project and Runtime contracts | Accepted schema/component/renderer/Runtime/build contracts and implementation; versioned project format; preview/export parity tests | **Acceptance plan only in PR #9; no Phase 1 implementation** |
+| Phase 2 compatibility surface | Stable asset/layout/theme semantics and production tests showing existing projects remain unchanged | **Specification plus isolated layout prototype (PRs #10/#13); no production Studio/renderer** |
+| Phase 3 data/action contracts | Approved binding/action API and security behavior with shared preview/Runtime fixtures | **No accepted deliverable found** |
+| Phase 4 game-operation contract | Approved manifest/lifecycle APIs and adversarial filesystem, integrity and recovery results | **Proposal/prototype only (PR #12); not approved or Runtime-integrated** |
+| Phase 5 release readiness | Reproducible packaging, signed/update trust and recovery evidence, diagnostics, support boundaries, reviewed release gate | **Partial publisher QA and updater proposal (PRs #14/#15); no accepted package/updater or Phase 5.3 gate** |
+| Schema migrations | Versioned migration engine and supported migration chain, fixtures for every supported source version, rollback/backup behavior | **Policy proposed in PR #16; implementation and fixtures absent** |
 | Named maintenance ownership | A named maintainer and operational responsibility for each proposed supported capability | **Not recorded** |
-| User demand for an expansion | Specific recurring user workflow, requests/interviews/issues, and evidence that the proposed track materially helps | **Not recorded** |
+| User demand for an expansion | Specific recurring user workflow, requests/interviews/issues, and evidence the proposed track materially helps | **Not recorded** |
 
-The product plan's provisional Windows-first direction is not a verified Studio or exported Launcher support claim. The plan itself says the technology direction remains provisional pending Phase 0 evidence.
+The product plan's Windows-first direction and PR #16's target candidate are not yet a verified Studio or exported Launcher support commitment. Studio and exported Launcher support must be assessed separately.
 
 ## 6.1 catalog preparation update
 
@@ -171,4 +174,4 @@ The integration owner should attach or link the following reviewed artifacts bef
 5. A named architecture owner and named maintenance ownership for the proposed capability.
 6. User evidence supporting exactly one Phase 6 candidate track.
 
-The contract-neutral conformance protocol is now documented in `docs/phase6/CONFORMANCE_PLAN.md`. Until the required contracts, fixtures, implementations, and reviews exist, the Phase 6 deliverable remains a readiness/protocol handoff. It intentionally adds no product feature, public API, project schema, or platform-support promise.
+The contract-neutral conformance protocol is documented in `docs/phase6/CONFORMANCE_PLAN.md`, and the case-to-candidate-contract mapping is documented in `docs/phase6/CONTRACT_TRACEABILITY.md`. Until the required contracts, fixtures, implementations, and reviews exist, the Phase 6 deliverable remains a readiness/protocol handoff. It intentionally adds no product feature, public API, project schema, or platform-support promise.
