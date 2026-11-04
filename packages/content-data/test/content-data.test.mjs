@@ -49,6 +49,29 @@ test("allows same-origin redirects and strips sensitive request headers", async 
   assert.equal(seen[1].headers.get("x-client"), "demo");
 });
 
+test("preserves caller credentials for a fresh retry after a redirect", async () => {
+  const seen = [];
+  let calls = 0;
+  const result = await fetchJson({
+    url: "https://a.example/data",
+    headers: { authorization: "Bearer retry-secret", "x-client": "demo" },
+    limits: { retries: 1, retryBaseDelayMs: 0 }
+  }, async (url, init) => {
+    calls++;
+    const headers = new Headers(init.headers);
+    seen.push({ url: String(url), authorization: headers.get("authorization") });
+    if (calls === 1) return new Response(null, { status: 302, headers: { location: "/redirected" } });
+    if (calls === 2) return new Response("busy", { status: 503 });
+    return json({ ok: true });
+  });
+
+  assert.deepEqual(result, { ok: true });
+  assert.equal(calls, 3);
+  assert.equal(seen[0].authorization, "Bearer retry-secret");
+  assert.equal(seen[1].authorization, null);
+  assert.equal(seen[2].authorization, "Bearer retry-secret");
+});
+
 test("enforces body byte caps and JSON content type", async () => {
   await assert.rejects(fetchJson({ url: "https://a.example/data", limits: { maxBytes: 4 } }, async () =>
     new Response('{"large":true}', { headers: { "content-type": "application/json" } })
