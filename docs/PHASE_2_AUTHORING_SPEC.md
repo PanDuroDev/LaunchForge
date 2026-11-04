@@ -81,12 +81,14 @@ The inspector should describe sizing in user terms and map it to renderer-neutra
 
 - **Fixed:** use an explicit logical size.
 - **Fit content:** size to the component's intrinsic content, subject to minimum/maximum constraints.
-- **Fill available:** consume available space on the relevant parent axis. If multiple siblings fill, distribute remaining space using a documented weight rule.
-- **Minimum/maximum:** constrain the resolved result without changing the authored sizing mode.
+- **Fill available:** consume the space remaining after fixed/fit children and the stack's base gaps are accounted for. Each fill child has a finite, positive weight; the default weight is **1**. Distribute remaining space in proportion to the active children’s weights.
+- **Minimum/maximum:** clamp the proposed fill allocation to the child's minimum and maximum. Resolve constraints iteratively: calculate the aggregate violation across all minimum and maximum violators; when it is positive, freeze only minimum violators, when negative freeze only maximum violators, and when zero freeze all violators. Redistribute the remaining space among children that are not frozen.
+- If the combined minimums exceed the available main-axis space, preserve the minimums and report overflow rather than silently shrinking below a minimum. If maximums leave unused space, pass the remainder to the stack's main-axis distribution rule.
+- Invalid, non-finite, zero, or negative fill weights are rejected. A minimum greater than its maximum is rejected. Fixed and fit-content sizes are resolved and clamped before fill allocation.
 
-A fixed size is expressed in logical UI units, not physical display pixels. The renderer must apply DPI/device-scale conversion at the presentation boundary. Do not serialize device-specific physical pixel values into a project.
+A fixed size is expressed in logical UI units, not physical display pixels. The layout model retains fractional logical-unit values and does not round each child's size independently. The renderer applies DPI/device-scale conversion at the presentation boundary. If physical-pixel snapping is required, calculate shared edges using cumulative positions and a deterministic rounding policy, preserving the total track extent; use logical child order as the stable tie-breaker. Do not serialize device-specific physical pixel values into a project.
 
-Every supported property needs validation for negative sizes, invalid weights, min greater than max, and impossible parent/child combinations. Invalid values must produce an inspector diagnostic and a safe deterministic fallback; they must not crash preview or export.
+Every supported property needs validation for negative sizes, non-finite values, invalid weights, min greater than max, and impossible parent/child combinations. Invalid values must produce an inspector diagnostic and a safe deterministic fallback; they must not crash preview or export.
 
 ### 3.4 Alignment, spacing, and overflow
 
@@ -96,7 +98,7 @@ Expose a limited, consistent vocabulary:
 - Main-axis distribution: start, center, end, and space-between.
 - Cross-axis alignment: start, center, end, and stretch where the child supports it.
 - Explicit text alignment for text components.
-- Child order as the source of stable reading and rendering order.
+- Child order is the stable **logical** order used by the hierarchy, serialization, keyboard/accessibility reading order, and component identity. RTL changes visual placement, not logical order: for logical children `A, B` in a horizontal RTL stack, `A` remains first in logical and accessibility order but is placed on the right, while `B` is placed to its left. Hit testing follows the visible geometry and returns the same stable child identity; it must not rewrite reading order.
 - Overflow behavior: visible, clip, or scroll only where the component/runtime supports it.
 
 Do not use the same label for different meanings. For example, container alignment and text alignment must remain distinct in the inspector.
@@ -144,6 +146,7 @@ The editor should provide a consistent relationship between the viewport, hierar
 - Selecting a node in either the viewport or hierarchy selects the same stable node ID in both.
 - The inspector shows only properties supported by the selected component contract.
 - Selection changes must not mutate the project.
+- Logical child order remains the source order for hierarchy and accessibility traversal. In an RTL horizontal stack, a two-child fixture with logical order `A, B` places `A` on the right and `B` on the left while keeping the accessible reading order `A, B`. Hit testing each visual rectangle returns that child's stable ID; preview and export must produce the same rectangles and identity mapping.
 - Multi-selection is appropriate only when the selected nodes share the properties/operation being edited. The UI must show mixed values instead of silently choosing one node's value.
 - Reordering is explicit and must preserve the node's stable identity.
 - Hidden nodes remain in the project and hierarchy; locked nodes remain visible/selectable in the hierarchy but cannot be moved or edited accidentally in the viewport.
@@ -181,6 +184,8 @@ Required behavior:
 - Support safe rename/move operations that update references transactionally.
 - Preserve required assets through project duplication, archive/export, import, and build/export.
 - Never allow an imported archive path to escape the destination root (including traversal paths and symlink/reparse-point cases).
+- Canonicalize the destination root and each target path. Verify that each target remains inside the canonical destination immediately before every write; do not rely only on an earlier validation pass.
+- Reject symlink, junction, and reparse-point archive entries, or handle them without following a link outside the destination root. Do not follow archive-provided links during extraction.
 - Keep binary data out of the main project document.
 
 The initial allowed asset formats and size/dimension limits must be agreed with the renderer and build owner. Do not claim SVG, animated media, remote assets, or arbitrary font formats as supported until the renderer has safe, tested handling for them. Imported font files must retain their license/attribution metadata where supplied; Studio must not imply that import grants redistribution rights.
@@ -231,6 +236,7 @@ Project-management workflows:
 - Import must validate the complete package before replacing an existing project.
 - Failed import must not partially overwrite the destination project.
 - Existing MVP projects must open without silent schema or layout changes.
+- A legacy fixture containing unsupported/unknown fields must preserve their semantic data through normal open/save and project export/import. Changes are allowed only through an explicit, versioned migration that reports what changed.
 
 Templates should be versioned independently from project instances. Updating a built-in template must not silently overwrite projects previously created from it.
 
@@ -246,7 +252,10 @@ A user who is not editing project JSON should be able to:
 6. Apply a theme preset, change a shared token, and override one component without changing the whole theme.
 7. Duplicate a project and confirm the source project remains unchanged.
 8. Export a project, import it into a clean workspace, and confirm its appearance and asset references are preserved.
-9. Open a Phase 1 MVP fixture and verify that it displays without an automatic destructive migration.
+9. Export/import a legacy fixture containing unsupported fields; compare its semantic data before and after the round trip and allow changes only through an explicit migration.
+10. Attempt imports with a malformed package, a missing asset, a schema-version mismatch, and an existing destination project. Verify validation finishes before any replacement; each rejected import leaves the destination project and all its references unchanged.
+11. Import an adversarial archive containing traversal paths and symlink/junction/reparse-point entries. Verify the entries are rejected or handled without following links outside the canonical destination root.
+12. Open a Phase 1 MVP fixture and verify that it displays without an automatic destructive migration.
 
 ## 5. Stage 2.3 — Accessibility, localization, and beta validation
 
@@ -374,6 +383,9 @@ Wait for the integration owner to approve the proposal. Do not add a second comp
 - [ ] Theme token updates and component overrides behave predictably.
 - [ ] All three starter templates are editable without project-file edits.
 - [ ] Project duplicate/archive/import/export workflows are recoverable and preserve required assets.
+- [ ] Malformed-package, missing-asset, schema-mismatch, and existing-destination import failures are tested; validation occurs before replacement and rejected imports leave destination data and references unchanged.
+- [ ] Adversarial archive fixtures with traversal and symlink/junction/reparse-point entries are rejected or handled without following links outside the canonical destination root; containment is checked immediately before every write.
+- [ ] Legacy fixtures containing unsupported fields preserve semantic data through project export/import unless an explicit, versioned migration is applied.
 - [ ] Compatibility view explains project/schema/runtime support and migration requirements.
 
 ### 2.3 — Accessibility, localization, beta
@@ -383,7 +395,7 @@ Wait for the integration owner to approve the proposal. Do not add a second comp
 - [ ] Unicode and locale-aware text handling pass mixed-script tests.
 - [ ] Supported RTL controls mirror only directional behavior.
 - [ ] DPI/scaling does not alter saved logical geometry.
-- [ ] Legacy Phase 1 projects open without silent changes.
+- [ ] Legacy Phase 1 projects, including fixtures with unsupported fields, preserve semantic data through normal open/re-save. Differences are allowed only through an explicit, versioned migration; this check belongs to 2.3, not the 2.1 layout gate.
 - [ ] Representative user tasks pass without manual JSON/source edits.
 - [ ] Limitations and unsupported components are documented.
 
