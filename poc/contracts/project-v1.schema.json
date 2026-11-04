@@ -98,7 +98,7 @@
               "properties": {
                 "path": {
                   "not": {
-                    "pattern": "\\.ico$"
+                    "pattern": "\\.[iI][cC][oO]$"
                   }
                 }
               }

@@ -1,7 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { readFile, readdir, rm, writeFile } from "node:fs/promises";
-import { createHash } from "node:crypto";
+import { createHash, randomUUID } from "node:crypto";
 import { spawnSync } from "node:child_process";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -12,6 +12,8 @@ import { validateWindowsIcon, REQUIRED_WINDOWS_ICO_SIZES } from "../scripts/lib/
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const fixtureText = await readFile(path.join(root, "fixtures/sample-project.json"), "utf8");
 const fixture = parseProjectText(fixtureText);
+const projectSchema = JSON.parse(await readFile(path.join(root, "contracts/project-v1.schema.json"), "utf8"));
+const expectedAssetManifest = JSON.parse(await readFile(path.join(root, "fixtures/expected-asset-manifest.json"), "utf8"));
 
 function expectCode(callback, code) {
   assert.throws(callback, (error) => error instanceof ProjectValidationError && error.code === code);
@@ -43,6 +45,11 @@ test("project requires a dedicated applicationIcon asset reference", () => {
   const icon = wrongPath.assets.find((asset) => asset.id === wrongPath.window.iconAssetId);
   icon.path = "assets/launcher-icon.png";
   expectCode(() => validateProject(wrongPath), "INVALID_APP_ICON_PATH");
+
+  const uppercaseIcoImage = structuredClone(fixture);
+  const normalImage = uppercaseIcoImage.assets.find((asset) => asset.kind === "image");
+  normalImage.path = "assets/cover.ICO";
+  expectCode(() => validateProject(uppercaseIcoImage), "INVALID_ASSET_KIND");
 });
 
 test("application ICO contains every required Windows icon layer", async () => {
@@ -75,6 +82,16 @@ test("theme tokens must be hexadecimal strings, not coercible values", () => {
   const invalid = structuredClone(fixture);
   invalid.theme.surface = ["#121826"];
   expectCode(() => validateProject(invalid), "INVALID_THEME_TOKEN");
+});
+
+test("JSON Schema excludes ICO image assets regardless of extension case", () => {
+  const imageRule = projectSchema.properties.assets.items.allOf.find(
+    (rule) => rule.if?.properties?.kind?.const === "image"
+  );
+  const excludedIco = new RegExp(imageRule.then.properties.path.not.pattern);
+  assert.equal(excludedIco.test("assets/logo.ICO"), true);
+  assert.equal(excludedIco.test("assets/logo.ico"), true);
+  assert.equal(excludedIco.test("assets/logo.png"), false);
 });
 
 test("unknown schema versions fail closed", () => {
@@ -155,7 +172,8 @@ test("local game binding resolves from project data", () => {
 });
 
 test("preview and exported package use byte-identical renderer and project contracts", async () => {
-  const unreferencedPath = path.join(root, "assets/unreferenced-phase0-test.txt");
+  const unreferencedName = `unreferenced-phase0-${randomUUID()}.txt`;
+  const unreferencedPath = path.join(root, "assets", unreferencedName);
   await writeFile(unreferencedPath, "This file is deliberately not declared in the project.");
   let result;
   try {
@@ -196,12 +214,14 @@ test("preview and exported package use byte-identical renderer and project contr
   })));
   expectedManifest.sort((left, right) => left.id < right.id ? -1 : left.id > right.id ? 1 : 0);
   assert.deepEqual(metadata.assetManifest, expectedManifest);
-  assert.equal(metadata.assetManifestSha256, hash(JSON.stringify(expectedManifest)));
+  assert.deepEqual(metadata.assetManifest, expectedAssetManifest.entries);
+  assert.equal(hash(JSON.stringify(metadata.assetManifest)), expectedAssetManifest.sha256);
+  assert.equal(metadata.assetManifestSha256, expectedAssetManifest.sha256);
   assert.equal(metadata.applicationIconAssetId, fixture.window.iconAssetId);
   assert.equal(metadata.applicationIconSha256, hash(sourceIcon));
   const exportedAssetFiles = await readdir(path.join(root, "dist/assets"));
   assert.deepEqual(exportedAssetFiles.sort(), fixture.assets.map((asset) => path.basename(asset.path)).sort());
-  assert.equal(exportedAssetFiles.includes("unreferenced-phase0-test.txt"), false);
+  assert.equal(exportedAssetFiles.includes(unreferencedName), false);
 });
 
 
