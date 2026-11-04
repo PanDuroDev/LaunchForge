@@ -192,7 +192,7 @@ The catalog now records **41 planned cases** in eight areas, with 40 unique depe
 ### Current dependency evidence
 
 - **Phase 0 PR #16:** latest Windows hosted run [#41924747295](https://github.com/PanDuroDev/LaunchForge/actions/runs/41924747295) passed through locked Tauri build, host smoke, portable package and artifact upload. PR remains open/unmerged and candidate contracts await review. Fresh-user Windows/WebView2, renderer parity, DPI/accessibility/RTL and performance evidence remain outstanding.
-- **Phase 0 verifier PR #23:** latest run [#41926599380](https://github.com/PanDuroDev/LaunchForge/actions/runs/41926599380) failed in the package-verifier fixture step, despite an earlier passing run. The open PR has review findings; fresh-user clean-VM acceptance has not been recorded.
+- **Phase 0 verifier PR #23:** latest run [#41927399651](https://github.com/PanDuroDev/LaunchForge/actions/runs/41927399651) passed all eight hosted fixtures using `-ValidateOnly`. Review still flags possible omission of deny-only Administrators membership in the standard-user check and requires the guide to bind the tested artifact to the exact current PR #16 head SHA. Fresh-user clean-VM acceptance has not been recorded.
 - **Phase 1 PR #22:** draft P1-A project foundation; Rust test suite not run. The Phase 0 workflow is not a P1-A validation result.
 - **Phase 3 PR #21:** Stage 3.1 bounded HTTPS JSON transport and typed mapping prototype merged. Runtime/Studio integration, DNS/IP egress enforcement and preview/export parity remain unproven.
 - **Phase 4 PR #25:** POSIX-only transaction/lifecycle prototype; no Windows/NTFS backend or native Runtime integration.
