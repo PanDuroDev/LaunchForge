@@ -202,12 +202,23 @@ function typeMatches(value: JsonValue, type: BindingType): boolean {
 export function mapFields<T extends Record<string, JsonValue> = Record<string, JsonValue>>(input: JsonValue, mappings: readonly FieldMapping[]): T {
   validateJson(input);
   const output = Object.create(null) as Record<string, JsonValue>, seen = new Set<string>();
+  if (!Array.isArray(mappings) || mappings.length > 1000) throw new MappingError("$", "invalid_mapping", "Provide at most 1000 field mappings");
   for (const m of mappings) {
-    if (!/^[A-Za-z][A-Za-z0-9_]{0,63}$/.test(m.field) || blocked.has(m.field) || seen.has(m.field)) throw new MappingError(m.field, "invalid_mapping", "Invalid or duplicate output field");
+    if (!m || typeof m !== "object" || typeof m.field !== "string" || typeof m.source !== "string" ||
+        !["string", "number", "boolean", "string[]", "object", "any"].includes(m.type)) {
+      throw new MappingError("$", "invalid_mapping", "A field mapping definition is malformed");
+    }
+    if (!/^[A-Za-z][A-Za-z0-9_]{0,63}$/.test(m.field) || blocked.has(m.field) || seen.has(m.field) || m.source.length > 2048) {
+      throw new MappingError(m.field, "invalid_mapping", "Invalid or duplicate output field or source path");
+    }
     seen.add(m.field);
+    if (m.transforms !== undefined && (!Array.isArray(m.transforms) || m.transforms.length > 8 ||
+        m.transforms.some(step => !["trim", "lowercase", "uppercase", "toNumber", "toBoolean", "toUrl"].includes(step)))) {
+      throw new MappingError(m.field, "invalid_mapping", "The mapping contains an unsupported transformation");
+    }
     let value = atPointer(input, m.source, m.field);
-    if (value === undefined || value === null) {
-      if (m.defaultValue !== undefined) value = m.defaultValue;
+    if (value === undefined) {
+      if (m.defaultValue !== undefined) { validateJson(m.defaultValue); value = m.defaultValue; }
       else if (m.optional) continue;
       else throw new MappingError(m.field, "missing_value", "Required source value is missing");
     }
@@ -220,6 +231,8 @@ export function mapFields<T extends Record<string, JsonValue> = Record<string, J
 
 export interface InspectedField { path: string; type: string; heterogeneous?: boolean; }
 export function inspectResponse(input: JsonValue, maxFields = 500): { rootType: string; fields: InspectedField[]; truncated: boolean } {
+  validateJson(input);
+  if (!Number.isInteger(maxFields) || maxFields < 1 || maxFields > 5000) throw new ContentError("invalid_request", "maxFields must be between 1 and 5000");
   const kinds = new Map<string, Set<string>>(), stack: Array<{ value: JsonValue; path: string; depth: number }> = [{ value: input, path: "", depth: 0 }];
   let truncated = false;
   while (stack.length && kinds.size <= maxFields) {
