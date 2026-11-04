@@ -147,16 +147,9 @@ pub struct ProjectValidator {
 }
 
 impl ProjectValidator {
+    /// Compile the single repository-owned v1 schema embedded at build time.
     pub fn embedded_v1() -> Result<Self, ProjectError> {
-        Self::from_schema_json(PROJECT_SCHEMA_V1)
-    }
-
-    /// Build a validator from an explicitly supplied schema document.
-    ///
-    /// Production callers should normally use embedded_v1, which compiles
-    /// the single repository-owned schema file.
-    pub fn from_schema_json(schema_json: &str) -> Result<Self, ProjectError> {
-        let schema: Value = serde_json::from_str(schema_json)
+        let schema: Value = serde_json::from_str(PROJECT_SCHEMA_V1)
             .map_err(|error| ProjectError::SchemaCompile(error.to_string()))?;
 
         let schema_validator = jsonschema::validator_for(&schema)
@@ -233,16 +226,6 @@ impl ProjectStore {
     pub fn new() -> Result<Self, ProjectError> {
         Ok(Self {
             validator: ProjectValidator::embedded_v1()?,
-        })
-    }
-
-    /// Construct a store with a schema supplied by an integration harness.
-    ///
-    /// This is useful for contract tests. Application code should use new
-    /// unless a reviewed contract migration explicitly requires otherwise.
-    pub fn with_schema_json(schema_json: &str) -> Result<Self, ProjectError> {
-        Ok(Self {
-            validator: ProjectValidator::from_schema_json(schema_json)?,
         })
     }
 
