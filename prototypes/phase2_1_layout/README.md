@@ -23,7 +23,7 @@ python -m unittest discover -s tests -v
 python -m compileall -q launchforge_layout tests
 ```
 
-No third-party packages are required.
+No third-party packages are required. Python 3.10 or later is required.
 
 ## Contract boundary
 
