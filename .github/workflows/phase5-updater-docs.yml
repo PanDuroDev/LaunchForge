@@ -29,6 +29,8 @@ jobs:
 
           matrix = Path("docs/LAUNCHER_UPDATE_CONFORMANCE_MATRIX.md").read_text(encoding="utf-8")
           proposal = Path("docs/LAUNCHER_UPDATE_TRUST_PROPOSAL.md").read_text(encoding="utf-8")
+          if "TUF), specification v1.0.36" not in proposal or "https://theupdateframework.github.io/specification/v1.0.36/" not in proposal:
+              raise SystemExit("Updater proposal must pin the published TUF 1.0.36 specification.")
           ids = re.findall(r"^\|\s*([A-Z]{2,4}-\d+[A-Z]?)\s*\|", matrix, re.MULTILINE)
           if not ids:
               raise SystemExit("No conformance case IDs found.")
