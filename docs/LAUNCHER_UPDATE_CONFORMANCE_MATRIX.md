@@ -17,7 +17,7 @@
 | TUF-009 | Root N+1 signed by new threshold but not old threshold | Reject |
 | TUF-010A | Timestamp, Snapshot or Targets metadata is expired at the fixed update start time | Reject; report expiry/freeze condition |
 | TUF-010B | Trusted or intermediate Root is expired while a consecutive rotation chain reaches a final Root whose expiry is later than the fixed update start time | Follow TUF root-rotation flow; defer Root expiry validation until the final Root, then accept the Root chain |
-| TUF-010C | Final Root expires at or before the fixed update start time | Reject; do not advance trusted Root or role state; report possible freeze |
+| TUF-010C | Final Root expires at or before the fixed update start time | Reject installation and further role use; persist each cryptographically verified Root hop as required by TUF; report possible freeze |
 | TUF-011 | Timestamp version lower than trusted | Reject rollback |
 | TUF-012 | Timestamp version equal but content differs | Reject inconsistency; unchanged version is not permission for changed bytes |
 | TUF-013 | Snapshot points to changed/missing/wrong-version Targets metadata | Reject mix-and-match |
