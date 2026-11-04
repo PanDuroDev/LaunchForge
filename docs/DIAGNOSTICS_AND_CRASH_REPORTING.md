@@ -8,7 +8,7 @@ Diagnostics are local-first. No automatic telemetry, background upload, analytic
 
 Capture only structured, allow-listed events. Prefer stable event codes and static localized error descriptions over arbitrary exception text.
 
-The reference exporter accepts only schema version 1 records containing:
+The machine-readable contract is [diagnostic-event-v1.schema.json](../schemas/diagnostic-event-v1.schema.json). The reference exporter accepts only schema version 1 records containing:
 
 | Field | Allowed value |
 |---|---|
