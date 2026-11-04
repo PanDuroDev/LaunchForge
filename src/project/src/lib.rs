@@ -336,6 +336,12 @@ impl ProjectStore {
         let path = path.as_ref();
         self.validator.validate(document.as_value())?;
         let bytes = document.to_json_pretty()?;
+        if bytes.len() > MAX_PROJECT_BYTES {
+            return Err(ProjectError::ProjectTooLarge {
+                actual_bytes: bytes.len(),
+                max_bytes: MAX_PROJECT_BYTES,
+            });
+        }
         atomic_replace(path, &bytes)
     }
 
