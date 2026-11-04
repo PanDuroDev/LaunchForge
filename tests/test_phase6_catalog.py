@@ -71,6 +71,53 @@ class ConformanceCatalogTests(unittest.TestCase):
             },
         )
 
+    def test_catalog_tracks_uuid_and_application_icon_contract_edges(self):
+        """Keep current Phase 0 schema-consistency gaps represented as planned cases."""
+        cases = {case["test_id"]: case for case in self.catalog["cases"]}
+        uuid_case = cases["LF-COMPAT-007"]
+        icon_case = cases["LF-COMPAT-008"]
+
+        self.assertEqual(uuid_case["category"], "project-format")
+        self.assertEqual(uuid_case["lifecycle"], "planned")
+        self.assertIn("phase0:project-format", uuid_case["contract_dependencies"])
+        self.assertIn("lowercase UUIDv4", uuid_case["expected_behavior"])
+        self.assertIn("reject uppercase spellings", uuid_case["expected_behavior"])
+
+        self.assertEqual(icon_case["category"], "project-format")
+        self.assertEqual(icon_case["lifecycle"], "planned")
+        self.assertIn("phase0:filesystem-security-policy", icon_case["contract_dependencies"])
+        self.assertIn("packaged resource bytes", icon_case["expected_behavior"])
+
+    def test_phase3_data_binding_and_network_egress_cases_are_planned(self):
+        """Keep data mapping and host egress requirements explicit before integration."""
+        cases = {case["test_id"]: case for case in self.catalog["cases"]}
+        mapping = cases["LF-CAP-006"]
+        egress = cases["LF-SEC-006"]
+
+        self.assertEqual(mapping["category"], "capability")
+        self.assertEqual(mapping["lifecycle"], "planned")
+        self.assertIn("phase3:data-binding-contract", mapping["contract_dependencies"])
+        self.assertIn("RFC 6901", mapping["scenario"])
+        self.assertIn("fail closed", mapping["expected_behavior"])
+
+        self.assertEqual(egress["category"], "security")
+        self.assertEqual(egress["lifecycle"], "planned")
+        self.assertIn("phase3:network-egress-policy", egress["contract_dependencies"])
+        self.assertIn("DNS-rebinding", egress["scenario"])
+        self.assertIn("at connection time", egress["expected_behavior"])
+
+    def test_portable_package_preflight_case_is_planned(self):
+        """Keep the Windows package verifier requirement in the planned catalog."""
+        cases = {case["test_id"]: case for case in self.catalog["cases"]}
+        package = cases["LF-PKG-006"]
+
+        self.assertEqual(package["category"], "packaging")
+        self.assertEqual(package["lifecycle"], "planned")
+        self.assertIn("phase5:package-contract", package["contract_dependencies"])
+        self.assertIn("hostile archive entries", package["scenario"])
+        self.assertIn("standard non-elevated Windows user", package["expected_behavior"])
+        self.assertIn("separate fresh-user clean-VM acceptance report", package["evidence_required"])
+
     def test_dependency_registry_matches_case_references(self):
         """Require a unique registry containing every and only referenced dependency."""
         referenced = {

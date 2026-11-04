@@ -73,3 +73,28 @@ These gaps should become concrete case records only when the corresponding contr
 | Expansion demand | **Not evidenced** | Dated user workflows/requests and one track decision with support-cost justification. |
 
 **Decision:** Keep executable product conformance, 6.2 selection and 6.3 support blocked. Continue 6.1 preparation by maintaining this traceability map and reconciling the catalog after PR #16 and the dependent Phase 1–5 contracts are formally accepted. Do not mark Phase 6 complete or publish a new platform/renderer/extension support claim from this evidence alone.
+
+
+## 6. Revalidation snapshot and added case traceability (2026-11-05)
+
+This section supersedes the older dated status rows above. The inventory now contains 41 cases; all five additions below remain `planned`.
+
+| Phase 6 case | Current source/evidence | Boundary and work still required |
+|---|---|---|
+| `LF-COMPAT-007` | Phase 0 PR #16 candidate Project Schema v1 and semantic validator; Phase 1 draft PR #22 implements lowercase UUIDv4 validation in its P1-A candidate. | Neither branch is an accepted contract. The architecture owner must approve one UUID canonicalization rule, ensure JSON Schema and semantic validation agree, and add project-wide duplicate-ID fixtures before this case can execute. |
+| `LF-COMPAT-008` | Phase 0 PR #16 requires `window.iconAssetId` to resolve to an `applicationIcon` asset and validates/stages ICO bytes for the Windows host. Current-head Windows workflow [#41924747295](https://github.com/PanDuroDev/LaunchForge/actions/runs/41924747295) passed its build/smoke/package steps. | Still needs accepted contract approval, invalid/missing/wrong-kind reference fixtures, declared-payload truncation fixtures, source-to-package digest checks and separate clean-machine evidence. |
+| `LF-CAP-006` | Phase 3.1 PR #21 is merged and provides fixture-tested bounded HTTPS JSON retrieval, RFC 6901 field mapping, typed values, defaults and safe transforms. | This is not yet a Studio or exported Runtime contract. Integration-owner approval, shared fixtures, diagnostic behavior and Preview/Runtime parity are still required; all mapping expectations remain planned. |
+| `LF-SEC-006` | PR #21 explicitly says HTTPS and same-origin redirects do not provide DNS/IP egress protection. | The privileged host must enforce approved destination policy after resolution and at connection time, including private/reserved addresses and DNS rebinding. No such product-level host evidence is accepted yet. |
+| `LF-PKG-006` | Phase 0 PR #23 adds a Windows portable-package verifier and hostile ZIP fixtures. Latest hosted verifier run [#41927399651](https://github.com/PanDuroDev/LaunchForge/actions/runs/41927399651) passed all eight fixture cases, but it uses `-ValidateOnly` and does not prove clean-user launch behavior. PR #23 review still flags deny-only Administrators membership detection and exact-current-PR-#16 artifact binding in the manual guide. | Keep planned until the latest verifier checks and review findings are resolved, a current-head workflow passes, the outer artifact/inner package procedure is verified, and a fresh standard-user Windows VM report is retained. |
+
+### Updated upstream status
+
+- **PR #16 (Phase 0):** current-head Windows workflow is green on run #41924747295, including Tauri build, host smoke and portable artifact upload. The PR remains open/unmerged without integration-owner approval. Clean-machine/WebView2 parity, DPI/accessibility/RTL and performance evidence are not covered by that hosted run.
+- **PR #22 (Phase 1.1):** remains draft. Its Rust tests have not been run; the workflow reported in its PR body is the Phase 0 Windows workflow, not the P1-A test suite.
+- **PR #21 (Phase 3.1):** merged, but its author explicitly excludes DNS/IP egress enforcement, the visual Connection Builder, secure credential storage, Runtime data-state/action integration and preview/Runtime parity.
+- **PR #25 (Phase 4.2/4.3):** open prototype; CI tests pass on POSIX, but Windows/NTFS reparse-point safety and native Runtime integration are absent.
+- **PR #14 / #18 (Phase 5.1/5.3):** both merged. PR #18's production release decision remains **FAIL / NO-GO**; the merge of the diagnostic sanitizer and checklist does not clear the missing Runtime/package, updater, clean-machine recovery and release-authority gates.
+- **PR #15 (Phase 5.2):** open proposal; no production updater implementation or accepted Runtime/package integration.
+- **Phase 6 ownership and demand:** no named Phase 6 maintainer or dated evidence justifying one of P6-A through P6-E has been recorded.
+
+The new cases sharpen traceability but do not change the support result. Keep the Studio and exported Launcher support matrix at **not verified**. Do not mark planned cases implemented, select an expansion, or announce a new platform/renderer/extension commitment.

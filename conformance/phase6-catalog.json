@@ -130,6 +130,55 @@
       "lifecycle": "planned"
     },
     {
+      "test_id": "LF-COMPAT-007",
+      "category": "project-format",
+      "title": "Align UUID schema and semantic validation",
+      "scenario": "Exercise canonical lowercase UUIDv4 identifiers, uppercase spellings, malformed version/variant bits, and case-variant duplicates across project, assets, games, and components in the candidate schema and semantic validator.",
+      "expected_behavior": "Once the v1 rule is approved, the schema and semantic validator both enforce canonical lowercase UUIDv4 strings and reject uppercase spellings. Entity IDs remain unique across the entire project, and accepted fixtures round-trip without identifier rewriting.",
+      "product_surfaces": [
+        "studio",
+        "exported_launcher"
+      ],
+      "contract_dependencies": [
+        "phase0:project-format",
+        "phase1:project-validation"
+      ],
+      "evidence_required": [
+        "integration-owner-approved lowercase UUIDv4 canonicalization rule",
+        "valid lowercase and rejected uppercase/malformed UUID fixtures",
+        "schema-versus-semantic-validator result comparison",
+        "duplicate-ID detection across project/assets/games/components"
+      ],
+      "mandatory": true,
+      "lifecycle": "planned"
+    },
+    {
+      "test_id": "LF-COMPAT-008",
+      "category": "project-format",
+      "title": "Resolve and preserve the application icon asset reference",
+      "scenario": "Validate a project whose window references an application-icon asset, then inspect the exported Windows package; include missing references, wrong asset kinds, invalid ICO headers, and truncated declared image payloads.",
+      "expected_behavior": "The accepted project contract requires the window icon reference to resolve to an allowed application-icon asset. Invalid references or out-of-range ICO payloads fail closed before packaging, and the packaged resource bytes and reported digest match the validated source asset.",
+      "product_surfaces": [
+        "studio",
+        "exported_launcher"
+      ],
+      "contract_dependencies": [
+        "phase0:project-format",
+        "phase0:filesystem-security-policy",
+        "phase1:asset-reference-contract",
+        "phase1:build-validation"
+      ],
+      "evidence_required": [
+        "approved application-icon reference rule",
+        "valid and invalid project fixtures",
+        "ICO payload-range boundary fixtures",
+        "source and packaged resource SHA-256 comparison",
+        "sanitized build diagnostic"
+      ],
+      "mandatory": true,
+      "lifecycle": "planned"
+    },
+    {
       "test_id": "LF-MIG-001",
       "category": "migration",
       "title": "Migrate every supported source version",
@@ -351,6 +400,30 @@
       "lifecycle": "planned"
     },
     {
+      "test_id": "LF-CAP-006",
+      "category": "capability",
+      "title": "Apply typed JSON data mappings deterministically",
+      "scenario": "Given the accepted data-binding contract, resolve RFC 6901 JSON Pointer fields from a bounded JSON response and apply declared output types, optional/default values, and the approved safe transformation allowlist.",
+      "expected_behavior": "Valid mappings produce deterministic typed values. Malformed pointers, prototype-sensitive path segments, duplicate output fields, unsupported transforms, missing required values, and type mismatches fail closed; optional missing fields are omitted and defaults are applied deterministically.",
+      "product_surfaces": [
+        "studio",
+        "exported_launcher"
+      ],
+      "contract_dependencies": [
+        "phase1:conformance-fixtures",
+        "phase3:data-binding-contract"
+      ],
+      "evidence_required": [
+        "approved binding and mapping contract version",
+        "valid and invalid JSON Pointer fixtures including escaped segments",
+        "typed mapping/default/optional/transform result matrix",
+        "bounded JSON response and structural-limit evidence",
+        "sanitized mapping diagnostics"
+      ],
+      "mandatory": true,
+      "lifecycle": "planned"
+    },
+    {
       "test_id": "LF-PARITY-001",
       "category": "parity",
       "title": "Match shared visual fixtures",
@@ -562,6 +635,30 @@
       "lifecycle": "planned"
     },
     {
+      "test_id": "LF-SEC-006",
+      "category": "security",
+      "title": "Enforce network egress policy beyond HTTPS",
+      "scenario": "Resolve approved endpoints and redirects against the accepted network egress policy; exercise loopback, private, link-local, reserved, cross-origin, and DNS-rebinding destinations.",
+      "expected_behavior": "The privileged host enforces approved destination policy after name resolution and at connection time. Disallowed addresses and DNS-rebinding transitions are denied; HTTPS and same-origin redirect checks alone are never treated as sufficient egress authorization.",
+      "product_surfaces": [
+        "studio",
+        "exported_launcher"
+      ],
+      "contract_dependencies": [
+        "phase0:runtime-permission-model",
+        "phase3:network-egress-policy"
+      ],
+      "evidence_required": [
+        "approved DNS/IP egress policy and threat model",
+        "loopback/private/link-local/reserved address fixtures",
+        "DNS-rebinding and redirect test traces",
+        "assertion that denied destinations cause no connection",
+        "sanitized denial diagnostics"
+      ],
+      "mandatory": true,
+      "lifecycle": "planned"
+    },
+    {
       "test_id": "LF-PKG-001",
       "category": "packaging",
       "title": "Install on a clean supported environment",
@@ -658,6 +755,32 @@
       "evidence_required": [
         "filesystem diff",
         "retained-data assertions"
+      ],
+      "mandatory": true,
+      "lifecycle": "planned"
+    },
+    {
+      "test_id": "LF-PKG-006",
+      "category": "packaging",
+      "title": "Preflight and smoke-verify a portable Windows package",
+      "scenario": "Run the accepted package verifier against a portable Windows ZIP containing the Launcher executable, build metadata, committed Cargo.lock, canonical asset manifest, and referenced application icon; exercise hostile archive entries and invalid package metadata before launch.",
+      "expected_behavior": "The verifier rejects traversal or non-portable ZIP paths, duplicate destinations, excessive entry counts or expanded sizes, missing required files, dangling icon references, and incorrect asset-manifest digests. A valid archive launches under a standard non-elevated Windows user with the documented WebView2 prerequisite and survives the bounded main-window smoke interval. A hosted CI fixture pass is retained separately from fresh-user VM acceptance.",
+      "product_surfaces": [
+        "exported_launcher"
+      ],
+      "contract_dependencies": [
+        "phase1:build-validation",
+        "phase5:artifact-inventory-contract",
+        "phase5:package-contract",
+        "phase5:supported-os-baseline"
+      ],
+      "evidence_required": [
+        "verifier version and exact source commit",
+        "valid and hostile ZIP fixture results",
+        "required-file and asset-manifest digest assertions",
+        "Windows OS/architecture, user privilege, WebView2 version and host smoke report",
+        "portable package SHA-256 and size",
+        "separate fresh-user clean-VM acceptance report"
       ],
       "mandatory": true,
       "lifecycle": "planned"
@@ -775,7 +898,9 @@
     "phase3:credential-export-policy",
     "phase3:credential-policy",
     "phase3:data-action-contract",
+    "phase3:data-binding-contract",
     "phase3:event-action-contract",
+    "phase3:network-egress-policy",
     "phase5:artifact-inventory-contract",
     "phase5:diagnostics-policy",
     "phase5:install-uninstall-policy",
