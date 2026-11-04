@@ -1,0 +1,44 @@
+name: Phase 6 catalog validation
+
+on:
+  pull_request:
+    paths:
+      - "conformance/**"
+      - "tools/validate_conformance_catalog.py"
+      - "tests/test_phase6_catalog.py"
+      - ".github/workflows/phase6-catalog.yml"
+  push:
+    branches:
+      - main
+      - ai7/phase6-readiness-gate
+    paths:
+      - "conformance/**"
+      - "tools/validate_conformance_catalog.py"
+      - "tests/test_phase6_catalog.py"
+      - ".github/workflows/phase6-catalog.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  validate-catalog:
+    name: Validate Phase 6 catalog
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: false
+
+      - name: Validate catalog metadata
+        run: python tools/validate_conformance_catalog.py
+
+      - name: Run catalog unit tests
+        run: python -m unittest discover -s tests -p "test_phase6_catalog.py" -v
+
+      - name: Compile validator and tests
+        run: python -m compileall -q tools/validate_conformance_catalog.py tests/test_phase6_catalog.py
