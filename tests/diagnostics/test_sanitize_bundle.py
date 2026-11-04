@@ -100,6 +100,25 @@ class DiagnosticSanitizerTests(unittest.TestCase):
         output, _ = sanitize_jsonl(json.dumps(hostile).encode("utf-8"))
         self.assertEqual(output, b"")
 
+    def test_unhashable_enum_value_is_dropped(self) -> None:
+        hostile = dict(self.safe, severity=["error"])
+        output, stats = sanitize_jsonl(json.dumps(hostile).encode("utf-8"))
+        self.assertEqual(output, b"")
+        self.assertEqual(stats.dropped_records, 1)
+
+    def test_rejects_symlink_source(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            actual = root / "actual.jsonl"
+            link = root / "linked.jsonl"
+            actual.write_text(json.dumps(self.safe), encoding="utf-8")
+            try:
+                link.symlink_to(actual)
+            except (OSError, NotImplementedError):
+                self.skipTest("symlink creation is not available")
+            with self.assertRaisesRegex(BundleError, "symbolic link"):
+                sanitize_file(link, root / "safe.jsonl")
+
     def test_rejects_unknown_component(self) -> None:
         hostile = dict(self.safe, component="C:/Users/Alice")
         output, _ = sanitize_jsonl(json.dumps(hostile).encode("utf-8"))
