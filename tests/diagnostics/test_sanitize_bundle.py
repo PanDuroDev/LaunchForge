@@ -12,6 +12,7 @@ from tools.diagnostics.sanitize_bundle import (
     main,
     sanitize_file,
     sanitize_jsonl,
+    sanitize_record,
 )
 
 
@@ -103,6 +104,51 @@ class DiagnosticSanitizerTests(unittest.TestCase):
     def test_unhashable_enum_value_is_dropped(self) -> None:
         hostile = dict(self.safe, severity=["error"])
         output, stats = sanitize_jsonl(json.dumps(hostile).encode("utf-8"))
+        self.assertEqual(output, b"")
+        self.assertEqual(stats.dropped_records, 1)
+
+    def test_non_string_registry_values_are_returned_as_invalid(self) -> None:
+        fields = (
+            "severity", "component", "outcome", "error_code",
+            "operation_stage", "metadata_role", "platform",
+        )
+        for field in fields:
+            for value in (["error"], {"value": "error"}):
+                with self.subTest(field=field, value=value):
+                    hostile = dict(self.safe)
+                    hostile[field] = value
+                    self.assertIsNone(sanitize_record(hostile))
+                    output, stats = sanitize_jsonl(json.dumps(hostile).encode("utf-8"))
+                    self.assertEqual(output, b"")
+                    self.assertEqual(stats.dropped_records, 1)
+
+    def test_rejects_uuid_v1_correlation_id(self) -> None:
+        hostile = dict(self.safe, correlation_id="123e4567-e89b-12d3-a456-426614174000")
+        output, stats = sanitize_jsonl(json.dumps(hostile).encode("utf-8"))
+        self.assertEqual(output, b"")
+        self.assertEqual(stats.dropped_records, 1)
+
+    def test_rejects_event_code_outside_fixed_registry(self) -> None:
+        hostile = dict(self.safe, event_code="LF_API_KEY_ABCDEF0123456789")
+        output, stats = sanitize_jsonl(json.dumps(hostile).encode("utf-8"))
+        self.assertEqual(output, b"")
+        self.assertEqual(stats.dropped_records, 1)
+
+    def test_rejects_unapproved_semver_identifiers_and_build_metadata(self) -> None:
+        for field, value in (
+            ("app_version", "1.2.3-alice"),
+            ("runtime_version", "1.2.3+secret-token"),
+            ("app_version", "1.2.3-release-candidate"),
+        ):
+            with self.subTest(field=field, value=value):
+                hostile = dict(self.safe, **{field: value})
+                output, stats = sanitize_jsonl(json.dumps(hostile).encode("utf-8"))
+                self.assertEqual(output, b"")
+                self.assertEqual(stats.dropped_records, 1)
+
+    def test_oversized_integer_literal_is_dropped(self) -> None:
+        raw = json.dumps(self.safe).replace('"duration_ms": 1234', '"duration_ms": ' + ("9" * 5000))
+        output, stats = sanitize_jsonl(raw.encode("utf-8"))
         self.assertEqual(output, b"")
         self.assertEqual(stats.dropped_records, 1)
 
