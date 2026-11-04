@@ -253,3 +253,9 @@ The repository workflow `.github/workflows/phase6-catalog.yml` runs on relevant 
 3. `python -m compileall -q tools/validate_conformance_catalog.py tests/test_phase6_catalog.py`
 
 A passing workflow demonstrates catalog metadata/test-harness health only. It is not a substitute for product-level migration, renderer, Runtime, packaging, security, or support-matrix conformance. The initial workflow attempt exposed an invalid `actions/setup-python` `cache: false` setting; the setting was removed, and the subsequent run passed on the exact PR checkout (36 catalog cases, 13 unit tests, compileall).
+
+## 9. Upstream contract traceability
+
+The current candidate contract and evidence mapping is maintained in `docs/phase6/CONTRACT_TRACEABILITY.md`. Consult it before translating a planned case into an executable adapter. It distinguishes PR-branch proposals from accepted interfaces, maps Phase 6 case groups to Phase 0/1/2/4/5 candidate artifacts, and records coverage gaps that must be reconciled after the integration owner approves those artifacts.
+
+The traceability map is provisional. Do not encode candidate schema/API details into the stable conformance catalog or mark tests implemented until the referenced upstream contract is accepted.
