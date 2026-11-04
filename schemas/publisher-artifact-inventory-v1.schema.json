@@ -210,7 +210,37 @@
               }
             ]
           }
-        }
+        },
+        "allOf": [
+          {
+            "if": {
+              "properties": {
+                "package_type": {
+                  "const": "installer"
+                }
+              },
+              "required": [
+                "package_type"
+              ]
+            },
+            "then": {
+              "properties": {
+                "signing": {
+                  "properties": {
+                    "status": {
+                      "not": {
+                        "const": "not-applicable"
+                      }
+                    }
+                  },
+                  "required": [
+                    "status"
+                  ]
+                }
+              }
+            }
+          }
+        ]
       }
     }
   },
