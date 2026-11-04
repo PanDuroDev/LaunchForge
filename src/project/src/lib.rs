@@ -114,25 +114,19 @@ impl ProjectDocument {
         &mut self.value
     }
 
-    pub fn project_id(&self) -> &str {
-        self.value
-            .get("projectId")
-            .and_then(Value::as_str)
-            .expect("validated project always has a projectId")
+    /// Returns None if the document was mutated into an invalid shape.
+    pub fn project_id(&self) -> Option<&str> {
+        self.value.get("projectId").and_then(Value::as_str)
     }
 
-    pub fn name(&self) -> &str {
-        self.value
-            .get("name")
-            .and_then(Value::as_str)
-            .expect("validated project always has a name")
+    /// Returns None if the document was mutated into an invalid shape.
+    pub fn name(&self) -> Option<&str> {
+        self.value.get("name").and_then(Value::as_str)
     }
 
-    pub fn schema_version(&self) -> u64 {
-        self.value
-            .get("schemaVersion")
-            .and_then(Value::as_u64)
-            .expect("validated project always has a schemaVersion")
+    /// Returns None if the document was mutated into an invalid or non-integer version.
+    pub fn schema_version(&self) -> Option<u64> {
+        self.value.get("schemaVersion").and_then(Value::as_u64)
     }
 
     /// Serialize semantically unchanged project data as formatted UTF-8 JSON.
