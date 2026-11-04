@@ -16,12 +16,13 @@
 | TUF-008 | Root N+1 signed by old threshold but not new threshold | Reject |
 | TUF-009 | Root N+1 signed by new threshold but not old threshold | Reject |
 | TUF-010A | Timestamp, Snapshot or Targets metadata is expired at the fixed update start time | Reject; report expiry/freeze condition |
-| TUF-010B | Trusted or intermediate Root is expired while a consecutive rotation chain reaches a fresh final Root | Follow TUF root-rotation flow; defer Root expiry validation until the final Root, then accept only if that final Root is fresh |
+| TUF-010B | Trusted or intermediate Root is expired while a consecutive rotation chain reaches a final Root whose expiry is later than the fixed update start time | Follow TUF root-rotation flow; defer Root expiry validation until the final Root, then accept the Root chain |
+| TUF-010C | Final Root expires at or before the fixed update start time | Reject; do not advance trusted Root or role state; report possible freeze |
 | TUF-011 | Timestamp version lower than trusted | Reject rollback |
 | TUF-012 | Timestamp version equal but content differs | Reject inconsistency; unchanged version is not permission for changed bytes |
 | TUF-013 | Snapshot points to changed/missing/wrong-version Targets metadata | Reject mix-and-match |
 | TUF-014 | Targets length/hash differs from downloaded target bytes | Reject and delete temporary target |
-| TUF-015 | Expired metadata replayed by stale mirror | Reject |
+| TUF-015 | Expired Timestamp, Snapshot or Targets metadata replayed by stale mirror | Reject |
 | TUF-016 | Repository withholds updates while returning an expired Timestamp | Expiry policy reports possible freeze; retain installed app |
 | TUF-017 | TUF root changes timestamp/snapshot signer | Follow conformant key-rotation and cached-state reset behavior; no ad-hoc reset |
 | TUF-018 | Multiple product/channel repositories share URLs but have distinct pinned roots | Never cross-accept metadata between repository identities |
@@ -37,7 +38,8 @@
 | REL-005 | Target application version is below installed version | Reject even if TUF signature/hash are valid |
 | REL-006 | Target application version is below persisted highest accepted release | Reject |
 | REL-007 | Beta/preview is offered to a stable installation | Do not silently switch channels |
-| REL-008 | A previously accepted release identity (product/channel/platform/application version) is republished under a higher Targets metadata version with a different target length or digest | Publishing gate rejects; client compares its durable version-to-target binding and rejects the changed bytes even though the new metadata is otherwise valid |
+| REL-008 | A previously accepted release identity (product/channel/platform/architecture/application version) is republished under a higher Targets metadata version with a different target length or digest | Publishing gate rejects; client compares its durable version-to-target binding and rejects the changed bytes even though the new metadata is otherwise valid |
+| REL-009 | Accepted version-to-target binding is missing or corrupt | Fail closed; do not reconstruct from remote metadata; require out-of-band re-bootstrap before installation |
 
 ## Source and resource-bound tests
 
