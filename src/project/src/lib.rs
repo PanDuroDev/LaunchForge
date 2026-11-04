@@ -312,7 +312,7 @@ impl ProjectStore {
             });
         }
 
-        let mut file = File::open(path).map_err(|error| io_error(path, error))?;
+        let mut file = File::open(path).map_err(|error| io_error("opening project file", error))?;
         let mut bytes = Vec::with_capacity(metadata.len() as usize);
         file.take((MAX_PROJECT_BYTES + 1) as u64)
             .read_to_end(&mut bytes)
