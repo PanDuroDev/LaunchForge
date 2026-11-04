@@ -156,6 +156,14 @@ try {
     Assert-True ($unsafeAssetPath.report.failure -match "non-portable") "The unsafe asset path was rejected for an unexpected reason."
     Write-Host "PASS: non-portable asset paths are rejected."
 
+    $reservedDeviceNameZip = Join-Path $work "reserved-device-name.zip"
+    $reservedDeviceNameReport = Join-Path $work "reserved-device-name-report.json"
+    New-TestPackage -ZipPath $reservedDeviceNameZip -AssetPath "assets/CON.foo.svg"
+    $reservedDeviceName = Invoke-Verifier -ZipPath $reservedDeviceNameZip -ReportPath $reservedDeviceNameReport
+    Assert-True ($reservedDeviceName.exitCode -ne 0) "A package with a reserved Windows device filename was accepted."
+    Assert-True ($reservedDeviceName.report.failure -match "reserved Windows device") "The reserved-device fixture failed for an unexpected reason."
+    Write-Host "PASS: reserved Windows device names are rejected before any extension."
+
     $invalidLeadingCharacterZip = Join-Path $work "invalid-leading-character.zip"
     $invalidLeadingCharacterReport = Join-Path $work "invalid-leading-character-report.json"
     New-TestPackage -ZipPath $invalidLeadingCharacterZip -AssetPath "assets/-cover.svg"
