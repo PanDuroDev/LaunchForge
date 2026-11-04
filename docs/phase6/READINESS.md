@@ -22,7 +22,7 @@ The assessment is based on the GitHub repository state inspected on 2026-11-04:
 - The only merged pull request is PR #1, which adds the product plan and explicitly describes itself as documentation-only.
 - At the time of the initial assessment, no open pull requests were present; a subsequent audit found the unmerged work listed below.
 - Phase 0–5 issues (#2–#7) are still open. Their described exit gates have not been demonstrated by merged code or test evidence in this repository state.
-- The visible Phase 1/2/4/5 work branches point to the same commit as `main`; they do not provide landed implementation or review evidence.
+- At the initial baseline inspection, visible Phase 1/2/4/5 work branches pointed to the same commit as `main`. A later audit found branch advances, which are recorded separately below; those unmerged branches still do not establish accepted contracts or landed implementation.
 - No project schema, migration implementation, renderer registry, Runtime API, security test suite, build/package pipeline, support matrix, or Phase 5 release implementation is present in the inspected tree.
 
 A branch name or an open phase issue is not evidence that its deliverables are implemented or accepted. This document does not infer completion from those signals.
