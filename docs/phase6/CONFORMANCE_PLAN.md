@@ -230,9 +230,9 @@ Until then, this protocol is a specification/handoff artifact and does not annou
 
 ## 7. Machine-readable catalog and metadata validation
 
-The planned cases are mirrored in `conformance/phase6-catalog.json`. Each entry records its stable test ID, category, scenario, expected behavior, applicable product surfaces, prerequisite-area labels, required evidence, mandatory flag, and lifecycle state.
+The planned cases are mirrored in `conformance/phase6-catalog.json`. Each entry records its stable test ID, category, scenario, expected behavior, applicable product surfaces, prerequisite-area labels, required evidence, mandatory flag, and lifecycle state. The catalog also has one canonical `dependency_registry`; every case dependency must match one registered identifier and the registry must not contain duplicate identifiers.
 
-All 36 entries currently use `lifecycle: planned`. The dependency strings are planning labels only and are not approved API names or proof that the dependencies exist.
+All 36 entries currently use `lifecycle: planned`. The 38 registered dependency strings are planning labels only and are not approved API names or proof that the dependencies exist. Keep each prerequisite area under one canonical label; do not introduce spelling/plural aliases.
 
 Validate the catalog structure from the repository root:
 
