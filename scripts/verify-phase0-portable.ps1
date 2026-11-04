@@ -97,7 +97,11 @@ try {
         $identity = [Security.Principal.WindowsIdentity]::GetCurrent()
         $principal = New-Object Security.Principal.WindowsPrincipal($identity)
         $adminSid = [Security.Principal.SecurityIdentifier]::new([Security.Principal.WellKnownSidType]::BuiltinAdministratorsSid, $null)
-        $isAdminMember = @($identity.Groups | ForEach-Object { $_.Value }) -contains $adminSid.Value
+        $tokenGroups = @(& "$env:SystemRoot\System32\whoami.exe" /groups 2>$null)
+        if ($LASTEXITCODE -ne 0) {
+            throw "Unable to inspect the current Windows token groups with whoami.exe."
+        }
+        $isAdminMember = ($tokenGroups -join "`n") -match [regex]::Escape($adminSid.Value)
         $isElevated = $principal.IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator) -or $isAdminMember
         if ($isElevated) {
             throw "Run this check from a standard user account that is not a member of Administrators."
