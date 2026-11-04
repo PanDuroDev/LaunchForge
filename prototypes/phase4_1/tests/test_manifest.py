@@ -65,10 +65,39 @@ class ManifestTests(unittest.TestCase):
         with self.assertRaisesRegex(ManifestError, "signature"):
             parse_and_verify_manifest(raw, bad, self.keys, {"cdn.example.com"})
 
+    def test_tampering_with_signed_release_fields_is_rejected(self):
+        """Verify that changing any authenticated release field invalidates the original signature."""
+        _, signature = self.signed()
+        mutations = {
+            "game_id": lambda document: document.__setitem__("game_id", "com.example.other"),
+            "release_version": lambda document: document.__setitem__("release_version", "1.2.4"),
+            "issued_at": lambda document: document.__setitem__("issued_at", "2026-01-02T12:00:00Z"),
+            "path": lambda document: document["files"][0].__setitem__("path", "bin/Other.exe"),
+            "url": lambda document: document["files"][0].__setitem__(
+                "url", "https://cdn.example.com/game/Other.exe"
+            ),
+            "size": lambda document: document["files"][0].__setitem__("size", 4),
+            "sha256": lambda document: document["files"][0].__setitem__("sha256", "0" * 64),
+        }
+        for field, mutate in mutations.items():
+            with self.subTest(field=field):
+                changed = json.loads(json.dumps(self.document))
+                mutate(changed)
+                raw = json.dumps(changed, ensure_ascii=False).encode("utf-8")
+                with self.assertRaisesRegex(ManifestError, "signature"):
+                    parse_and_verify_manifest(raw, signature, self.keys, {"cdn.example.com"})
+
     def test_untrusted_publisher_key_rejected(self):
         """Verify that untrusted publisher key rejected behaves as expected."""
         with self.assertRaisesRegex(ManifestError, "not trusted"):
             self.verify(trusted_keys={})
+
+    def test_oversized_integer_literal_rejected(self):
+        """Reject pathological integer literals before JSON converts them."""
+        raw_text = json.dumps(self.document).replace('"size": 3', '"size": ' + ("9" * 5000))
+        raw = raw_text.encode("utf-8")
+        with self.assertRaisesRegex(ManifestError, "integer literal"):
+            parse_and_verify_manifest(raw, b"x" * 64, self.keys, {"cdn.example.com"})
 
     def test_duplicate_json_keys_rejected_before_signature_check(self):
         """Verify that duplicate json keys rejected before signature check behaves as expected."""
