@@ -74,25 +74,22 @@ pub enum ProjectError {
     #[error("project name must contain 1 to 80 non-whitespace characters")]
     InvalidProjectName,
 
-    #[error("project path has no filename: {0}")]
-    InvalidProjectPath(PathBuf),
+    #[error("project destination path does not identify a file")]
+    InvalidProjectPath,
 
-    #[error("refusing to open or replace a symbolic-link project file: {0}")]
-    SymbolicLinkProject(PathBuf),
+    #[error("refusing to open or replace a symbolic-link project file")]
+    SymbolicLinkProject,
 
-    #[error("I/O error for {path}: {source}")]
+    #[error("I/O error while {operation}: {source}")]
     Io {
-        path: PathBuf,
+        operation: &'static str,
         #[source]
         source: std::io::Error,
     },
 }
 
-fn io_error(path: &Path, source: std::io::Error) -> ProjectError {
-    ProjectError::Io {
-        path: path.to_path_buf(),
-        source,
-    }
+fn io_error(operation: &'static str, source: std::io::Error) -> ProjectError {
+    ProjectError::Io { operation, source }
 }
 
 /// A parsed project document.
@@ -181,7 +178,7 @@ impl ProjectValidator {
             diagnostics.push(ValidationDiagnostic::new(
                 "SCHEMA_VALIDATION_FAILED",
                 error.instance_path().to_string(),
-                error.to_string(),
+                error.masked().to_string(),
             ));
         }
 
@@ -303,9 +300,10 @@ impl ProjectStore {
     pub fn open(&self, path: impl AsRef<Path>) -> Result<ProjectDocument, ProjectError> {
         let path = path.as_ref();
 
-        let metadata = fs::symlink_metadata(path).map_err(|error| io_error(path, error))?;
+        let metadata = fs::symlink_metadata(path)
+            .map_err(|error| io_error("reading project file metadata", error))?;
         if metadata.file_type().is_symlink() {
-            return Err(ProjectError::SymbolicLinkProject(path.to_path_buf()));
+            return Err(ProjectError::SymbolicLinkProject);
         }
         if metadata.len() > MAX_PROJECT_BYTES as u64 {
             return Err(ProjectError::ProjectTooLarge {
@@ -318,7 +316,7 @@ impl ProjectStore {
         let mut bytes = Vec::with_capacity(metadata.len() as usize);
         file.take((MAX_PROJECT_BYTES + 1) as u64)
             .read_to_end(&mut bytes)
-            .map_err(|error| io_error(path, error))?;
+            .map_err(|error| io_error("reading project file", error))?;
 
         self.validator.parse_bytes(&bytes)
     }
@@ -658,7 +656,7 @@ impl Drop for TemporaryFile {
 fn atomic_replace(path: &Path, bytes: &[u8]) -> Result<(), ProjectError> {
     let file_name = path
         .file_name()
-        .ok_or_else(|| ProjectError::InvalidProjectPath(path.to_path_buf()))?;
+        .ok_or(ProjectError::InvalidProjectPath)?;
 
     let parent = path
         .parent()
@@ -667,11 +665,11 @@ fn atomic_replace(path: &Path, bytes: &[u8]) -> Result<(), ProjectError> {
 
     match fs::symlink_metadata(path) {
         Ok(metadata) if metadata.file_type().is_symlink() => {
-            return Err(ProjectError::SymbolicLinkProject(path.to_path_buf()));
+            return Err(ProjectError::SymbolicLinkProject);
         }
         Ok(metadata) if !metadata.is_file() => {
             return Err(io_error(
-                path,
+                "checking project destination",
                 std::io::Error::new(
                     std::io::ErrorKind::InvalidInput,
                     "project destination is not a regular file",
@@ -680,7 +678,7 @@ fn atomic_replace(path: &Path, bytes: &[u8]) -> Result<(), ProjectError> {
         }
         Ok(_) => {}
         Err(error) if error.kind() == std::io::ErrorKind::NotFound => {}
-        Err(error) => return Err(io_error(path, error)),
+        Err(error) => return Err(io_error("checking project destination", error)),
     }
 
     let mut temporary_path = None;
@@ -704,13 +702,13 @@ fn atomic_replace(path: &Path, bytes: &[u8]) -> Result<(), ProjectError> {
                 break;
             }
             Err(error) if error.kind() == std::io::ErrorKind::AlreadyExists => continue,
-            Err(error) => return Err(io_error(&candidate, error)),
+            Err(error) => return Err(io_error("creating temporary project file", error)),
         }
     }
 
     let temporary_path = temporary_path.ok_or_else(|| {
         io_error(
-            parent,
+            "allocating temporary project file",
             std::io::Error::new(
                 std::io::ErrorKind::AlreadyExists,
                 "could not allocate a unique temporary project file",
@@ -724,18 +722,19 @@ fn atomic_replace(path: &Path, bytes: &[u8]) -> Result<(), ProjectError> {
 
     let mut file = temporary_file.expect("temporary path and file are set together");
     file.write_all(bytes)
-        .map_err(|error| io_error(&temporary_path, error))?;
+        .map_err(|error| io_error("writing temporary project file", error))?;
     file.sync_all()
-        .map_err(|error| io_error(&temporary_path, error))?;
+        .map_err(|error| io_error("flushing temporary project file", error))?;
     drop(file);
 
-    replace_file(&temporary_path, path).map_err(|error| io_error(path, error))?;
+    replace_file(&temporary_path, path)
+        .map_err(|error| io_error("replacing project file", error))?;
     guard.committed = true;
 
     #[cfg(unix)]
     File::open(parent)
         .and_then(|directory| directory.sync_all())
-        .map_err(|error| io_error(parent, error))?;
+        .map_err(|error| io_error("syncing project directory entry", error))?;
 
     Ok(())
 }
