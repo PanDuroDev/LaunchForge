@@ -218,6 +218,9 @@ export function mapFields<T extends Record<string, JsonValue> = Record<string, J
         !["string", "number", "boolean", "string[]", "object", "any"].includes(m.type)) {
       throw new MappingError("$", "invalid_mapping", "A field mapping definition is malformed");
     }
+    if (m.optional !== undefined && typeof m.optional !== "boolean") {
+      throw new MappingError(m.field, "invalid_mapping", "Optional must be a boolean");
+    }
     if (!/^[A-Za-z][A-Za-z0-9_]{0,63}$/.test(m.field) || blocked.has(m.field) || seen.has(m.field) || m.source.length > 2048) {
       throw new MappingError(m.field, "invalid_mapping", "Invalid or duplicate output field or source path");
     }
