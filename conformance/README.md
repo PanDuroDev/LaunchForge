@@ -20,3 +20,7 @@ The validator checks catalog structure, stable ID syntax and uniqueness, categor
 Each `contract_dependencies` value is a planning label for a prerequisite area (for example `phase1:renderer-contract`). It is not an approved schema identifier, public API name, or claim that the contract exists. Replace or map these labels only after the relevant Phase 0–5 contracts are reviewed and accepted.
 
 The catalog is intentionally renderer/runtime neutral and must not be used to infer support for an OS, Studio, or exported Launcher target.
+
+## Continuous validation
+
+The `.github/workflows/phase6-catalog.yml` workflow runs the same validator, unit test suite, and compile check on relevant pull requests and pushes. A successful run confirms catalog/harness metadata only; it does not mark any of the 36 product conformance cases as executed.
