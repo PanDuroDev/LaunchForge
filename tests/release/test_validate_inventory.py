@@ -119,6 +119,11 @@ class PublisherInventoryTests(unittest.TestCase):
         self.inventory["version"] = "1.2.3-rc.1"
         self.assert_invalid("stable channel")
 
+    def test_rejects_numeric_prerelease_identifier_with_leading_zero(self) -> None:
+        self.inventory["channel"] = "beta"
+        self.inventory["version"] = "1.2.3-beta.02"
+        self.assert_invalid("must not contain leading zeroes")
+
     def test_preview_channel_requires_prerelease(self) -> None:
         self.inventory["channel"] = "preview"
         self.assert_invalid("must contain a prerelease")
