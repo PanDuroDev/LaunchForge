@@ -104,7 +104,7 @@ class LifecycleTests(unittest.TestCase):
         (self.install_dir / "bin/Game.exe").write_bytes(b"tampered")
         runtime = FakeRuntime()
         with self.assertRaisesRegex(TransactionError, "integrity"):
-            self.service.launch("sample.game", "1", [self.record], LaunchConfig("bin/Game.exe"), runtime)
+            self.service.launch("sample.game", "1", [self.record], runtime)
         self.assertEqual(runtime.calls, [])
 
     def test_cancellation_during_staging_does_not_replace_install(self):
