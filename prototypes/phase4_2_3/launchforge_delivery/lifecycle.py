@@ -83,6 +83,7 @@ class GameLifecycleService:
         self._busy = False
         self._snapshot = GameSnapshot("", "", GameState.IDLE)
         self._process_handle: object | None = None
+        self._pending_exit: tuple[bool, Optional[int]] = (False, None)
 
     @property
     def snapshot(self) -> GameSnapshot:
@@ -224,11 +225,53 @@ class GameLifecycleService:
             handle = adapter.launch_game(game_id)
             if handle is None:
                 raise TransactionError("Runtime adapter did not return a process handle")
-            self._process_handle = handle
-            self._set(GameState.RUNNING, message="Game process started")
+            with self._lock:
+                exited, exit_code = self._pending_exit
+                self._pending_exit = (False, None)
+                current = self._snapshot
+                if exited:
+                    self._process_handle = None
+                    message = "Game process exited" if exit_code is None else f"Game process exited ({exit_code})"
+                    snapshot = GameSnapshot(
+                        operation_id=current.operation_id,
+                        game_id=current.game_id,
+                        state=GameState.READY,
+                        version=current.version,
+                        completed_bytes=current.completed_bytes,
+                        total_bytes=current.total_bytes,
+                        message=message,
+                    )
+                else:
+                    self._process_handle = handle
+                    snapshot = GameSnapshot(
+                        operation_id=current.operation_id,
+                        game_id=current.game_id,
+                        state=GameState.RUNNING,
+                        version=current.version,
+                        completed_bytes=current.completed_bytes,
+                        total_bytes=current.total_bytes,
+                        message="Game process started",
+                    )
+                self._snapshot = snapshot
+            self._notify(snapshot)
             return handle
         except Exception as exc:
-            self._set(GameState.ERROR, message=str(exc), error_code=type(exc).__name__)
+            with self._lock:
+                self._pending_exit = (False, None)
+                self._process_handle = None
+                current = self._snapshot
+                snapshot = GameSnapshot(
+                    operation_id=current.operation_id,
+                    game_id=current.game_id,
+                    state=GameState.ERROR,
+                    version=current.version,
+                    completed_bytes=current.completed_bytes,
+                    total_bytes=current.total_bytes,
+                    message=str(exc),
+                    error_code=type(exc).__name__,
+                )
+                self._snapshot = snapshot
+            self._notify(snapshot)
             raise
         finally:
             with self._lock:
@@ -237,6 +280,10 @@ class GameLifecycleService:
     def process_exited(self, exit_code: Optional[int] = None) -> None:
         """Atomically publish the game-process exit and release the running-state gate."""
         with self._lock:
+            if self._snapshot.state == GameState.LAUNCHING:
+                if not self._pending_exit[0]:
+                    self._pending_exit = (True, exit_code)
+                return
             if self._snapshot.state != GameState.RUNNING or self._process_handle is None:
                 raise TransactionError("process-exit event received while the game is not running")
             self._process_handle = None
@@ -263,6 +310,7 @@ class GameLifecycleService:
                 raise TransactionError("game operations are blocked while the game process is launching or running")
             self._busy = True
             self._cancel.clear()
+            self._pending_exit = (False, None)
             snapshot = GameSnapshot(uuid.uuid4().hex, game_id, state, version, 0, total, state.value)
             self._snapshot = snapshot
         self._notify(snapshot)
