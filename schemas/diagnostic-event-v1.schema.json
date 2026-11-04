@@ -43,8 +43,26 @@
     },
     "event_code": {
       "type": "string",
-      "pattern": "^LF_[A-Z0-9_]{1,60}$",
-      "maxLength": 64
+      "description": "Fixed event-code registry; arbitrary LF_-prefixed values are not accepted.",
+      "enum": [
+        "LF_APP_START_FAILED",
+        "LF_BOOTSTRAP_FAILED",
+        "LF_CONNECTION_FAILED",
+        "LF_EXPORT_FAILED",
+        "LF_GAME_INSTALL_FAILED",
+        "LF_GAME_LAUNCH_FAILED",
+        "LF_GAME_REPAIR_FAILED",
+        "LF_GAME_UPDATE_FAILED",
+        "LF_GAME_VERIFY_FAILED",
+        "LF_PROJECT_LOAD_FAILED",
+        "LF_PROJECT_SAVE_FAILED",
+        "LF_RECOVERY_REQUIRED",
+        "LF_RECOVERY_SUCCEEDED",
+        "LF_UPDATE_CHECK_FAILED",
+        "LF_UPDATE_FAILED",
+        "LF_UPDATE_ROLLBACK",
+        "LF_UPDATE_SUCCEEDED"
+      ]
     },
     "outcome": {
       "enum": [
@@ -109,12 +127,12 @@
     "app_version": {
       "type": "string",
       "maxLength": 128,
-      "pattern": "^(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)(?:-(?:0|[1-9][0-9]*|[0-9A-Za-z-]*[A-Za-z-][0-9A-Za-z-]*)(?:\\.(?:0|[1-9][0-9]*|[0-9A-Za-z-]*[A-Za-z-][0-9A-Za-z-]*))*)?(?:\\+[0-9A-Za-z-]+(?:\\.[0-9A-Za-z-]+)*)?$"
+      "pattern": "^(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)(?:-(?:alpha|beta|preview|rc)(?:\\.(?:0|[1-9][0-9]*))?)?$"
     },
     "runtime_version": {
       "type": "string",
       "maxLength": 128,
-      "pattern": "^(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)(?:-(?:0|[1-9][0-9]*|[0-9A-Za-z-]*[A-Za-z-][0-9A-Za-z-]*)(?:\\.(?:0|[1-9][0-9]*|[0-9A-Za-z-]*[A-Za-z-][0-9A-Za-z-]*))*)?(?:\\+[0-9A-Za-z-]+(?:\\.[0-9A-Za-z-]+)*)?$"
+      "pattern": "^(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)(?:-(?:alpha|beta|preview|rc)(?:\\.(?:0|[1-9][0-9]*))?)?$"
     },
     "platform": {
       "enum": [
@@ -132,7 +150,8 @@
     },
     "correlation_id": {
       "type": "string",
-      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
+      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+      "description": "Random UUID version 4 only; do not encode user or device identifiers."
     },
     "attempt": {
       "type": "integer",
