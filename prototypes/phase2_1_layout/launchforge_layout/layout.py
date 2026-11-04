@@ -232,10 +232,12 @@ def _allocate_fill(specs: Sequence[AxisSpec], available: float) -> list[float]:
     remaining = available
 
     while active:
-        total_weight = sum(specs[index].value for index in active)
+        # Sort indices so floating-point accumulation and tie handling are stable.
+        ordered_active = sorted(active)
+        total_weight = sum(specs[index].value for index in ordered_active)
         proposed = {
             index: remaining * specs[index].value / total_weight
-            for index in active
+            for index in ordered_active
         }
         min_frozen: dict[int, float] = {}
         max_frozen: dict[int, float] = {}
