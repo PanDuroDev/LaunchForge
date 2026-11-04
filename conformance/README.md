@@ -11,7 +11,7 @@ python tools/validate_conformance_catalog.py
 python -m unittest discover -s tests -p "test_phase6_catalog.py" -v
 ```
 
-The validator checks catalog structure, stable ID syntax and uniqueness, category/prefix consistency, product-surface values, dependency/evidence presence, and field types.
+The validator checks catalog structure, stable ID syntax and uniqueness, category/prefix consistency, product-surface values, dependency/evidence presence, exact field sets, dependency-label grammar, and references against the canonical `dependency_registry`. Keep each prerequisite area under one registry ID; case entries must reference registered IDs only.
 
 **Important:** These commands validate the test catalog only. They do not execute LaunchForge behavior, migration, renderer, Runtime, packaging, or security conformance. All entries currently have `lifecycle: planned`. Do not change a case to `implemented` until its executable adapter and passing evidence exist.
 
