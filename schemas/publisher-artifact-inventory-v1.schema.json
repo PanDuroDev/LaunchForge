@@ -15,7 +15,9 @@
     "artifacts"
   ],
   "properties": {
-    "schema_version": { "const": 1 },
+    "schema_version": {
+      "const": 1
+    },
     "product_id": {
       "type": "string",
       "minLength": 1,
@@ -25,9 +27,15 @@
     "version": {
       "type": "string",
       "maxLength": 128,
-      "pattern": "^(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)(-[0-9A-Za-z-]+(\\.[0-9A-Za-z-]+)*)?(\\+[0-9A-Za-z-]+(\\.[0-9A-Za-z-]+)*)?$"
+      "pattern": "^(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)(?:-(?:0|[1-9][0-9]*|[0-9A-Za-z-]*[A-Za-z-][0-9A-Za-z-]*)(?:\\.(?:0|[1-9][0-9]*|[0-9A-Za-z-]*[A-Za-z-][0-9A-Za-z-]*))*)?(?:\\+[0-9A-Za-z-]+(?:\\.[0-9A-Za-z-]+)*)?$"
     },
-    "channel": { "enum": ["stable", "beta", "preview"] },
+    "channel": {
+      "enum": [
+        "stable",
+        "beta",
+        "preview"
+      ]
+    },
     "source_revision": {
       "type": "string",
       "pattern": "^(?:[0-9a-f]{40}|[0-9a-f]{64})$"
@@ -35,11 +43,27 @@
     "build": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["workflow", "run_id", "toolchain", "built_at_utc"],
+      "required": [
+        "workflow",
+        "run_id",
+        "toolchain",
+        "built_at_utc"
+      ],
       "properties": {
-        "workflow": { "type": "string", "minLength": 1, "maxLength": 200 },
-        "run_id": { "type": "string", "pattern": "^[0-9]{1,32}$" },
-        "toolchain": { "type": "string", "minLength": 1, "maxLength": 512 },
+        "workflow": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 200
+        },
+        "run_id": {
+          "type": "string",
+          "pattern": "^[0-9]{1,32}$"
+        },
+        "toolchain": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 512
+        },
         "built_at_utc": {
           "type": "string",
           "format": "date-time",
@@ -80,9 +104,21 @@
             "type": "string",
             "pattern": "^windows-[a-z0-9][a-z0-9_-]{0,31}$"
           },
-          "package_type": { "enum": ["installer", "portable"] },
-          "size_bytes": { "type": "integer", "minimum": 1, "maximum": 9223372036854775807 },
-          "sha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+          "package_type": {
+            "enum": [
+              "installer",
+              "portable"
+            ]
+          },
+          "size_bytes": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 9223372036854776000
+          },
+          "sha256": {
+            "type": "string",
+            "pattern": "^[0-9a-f]{64}$"
+          },
           "signing": {
             "type": "object",
             "additionalProperties": false,
@@ -94,29 +130,82 @@
               "reason"
             ],
             "properties": {
-              "status": { "enum": ["signed", "unsigned", "not-applicable"] },
-              "subject": { "type": ["string", "null"], "maxLength": 512 },
-              "certificate_thumbprint": { "type": ["string", "null"] },
-              "timestamped": { "type": "boolean" },
-              "reason": { "type": ["string", "null"], "maxLength": 512 }
+              "status": {
+                "enum": [
+                  "signed",
+                  "unsigned",
+                  "not-applicable"
+                ]
+              },
+              "subject": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "maxLength": 512
+              },
+              "certificate_thumbprint": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "timestamped": {
+                "type": "boolean"
+              },
+              "reason": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "maxLength": 512
+              }
             },
             "oneOf": [
               {
                 "properties": {
-                  "status": { "const": "signed" },
-                  "subject": { "type": "string", "minLength": 1, "maxLength": 512 },
-                  "certificate_thumbprint": { "type": "string", "pattern": "^(?:[0-9A-Fa-f]{40}|[0-9A-Fa-f]{64})$" },
-                  "timestamped": { "const": true },
-                  "reason": { "type": "null" }
+                  "status": {
+                    "const": "signed"
+                  },
+                  "subject": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 512
+                  },
+                  "certificate_thumbprint": {
+                    "type": "string",
+                    "pattern": "^(?:[0-9A-Fa-f]{40}|[0-9A-Fa-f]{64})$"
+                  },
+                  "timestamped": {
+                    "const": true
+                  },
+                  "reason": {
+                    "type": "null"
+                  }
                 }
               },
               {
                 "properties": {
-                  "status": { "enum": ["unsigned", "not-applicable"] },
-                  "subject": { "type": "null" },
-                  "certificate_thumbprint": { "type": "null" },
-                  "timestamped": { "const": false },
-                  "reason": { "type": "string", "minLength": 1, "maxLength": 512 }
+                  "status": {
+                    "enum": [
+                      "unsigned",
+                      "not-applicable"
+                    ]
+                  },
+                  "subject": {
+                    "type": "null"
+                  },
+                  "certificate_thumbprint": {
+                    "type": "null"
+                  },
+                  "timestamped": {
+                    "const": false
+                  },
+                  "reason": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 512
+                  }
                 }
               }
             ]
@@ -127,15 +216,32 @@
   },
   "allOf": [
     {
-      "if": { "properties": { "channel": { "const": "stable" } }, "required": ["channel"] },
+      "if": {
+        "properties": {
+          "channel": {
+            "const": "stable"
+          }
+        },
+        "required": [
+          "channel"
+        ]
+      },
       "then": {
         "properties": {
-          "version": { "pattern": "^(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)(\\+[0-9A-Za-z-]+(\\.[0-9A-Za-z-]+)*)?$" },
+          "version": {
+            "pattern": "^(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)(?:\\+[0-9A-Za-z-]+(?:\\.[0-9A-Za-z-]+)*)?$"
+          },
           "artifacts": {
             "items": {
               "properties": {
                 "signing": {
-                  "properties": { "status": { "not": { "const": "unsigned" } } }
+                  "properties": {
+                    "status": {
+                      "not": {
+                        "const": "unsigned"
+                      }
+                    }
+                  }
                 }
               }
             }
@@ -144,10 +250,24 @@
       }
     },
     {
-      "if": { "properties": { "channel": { "enum": ["beta", "preview"] } }, "required": ["channel"] },
+      "if": {
+        "properties": {
+          "channel": {
+            "enum": [
+              "beta",
+              "preview"
+            ]
+          }
+        },
+        "required": [
+          "channel"
+        ]
+      },
       "then": {
         "properties": {
-          "version": { "pattern": "^(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)-[0-9A-Za-z-]+(\\.[0-9A-Za-z-]+)*(\\+[0-9A-Za-z-]+(\\.[0-9A-Za-z-]+)*)?$" }
+          "version": {
+            "pattern": "^(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)-(?:0|[1-9][0-9]*|[0-9A-Za-z-]*[A-Za-z-][0-9A-Za-z-]*)(?:\\.(?:0|[1-9][0-9]*|[0-9A-Za-z-]*[A-Za-z-][0-9A-Za-z-]*))*(?:\\+[0-9A-Za-z-]+(?:\\.[0-9A-Za-z-]+)*)?$"
+          }
         }
       }
     }
