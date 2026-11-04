@@ -1,6 +1,7 @@
 import hashlib
 from types import SimpleNamespace
 import tempfile
+import threading
 import unittest
 from pathlib import Path
 
@@ -103,8 +104,14 @@ class LifecycleTests(unittest.TestCase):
                 self.service = service
 
             def launch_game(self, game_id):
-                """Deliver process exit before returning the already-finished process handle."""
-                self.service.process_exited(0)
+                """Deliver process exit from a monitor thread before returning the handle."""
+                monitor = threading.Thread(
+                    target=self.service.process_exited, kwargs={"exit_code": 0}
+                )
+                monitor.start()
+                monitor.join(timeout=2)
+                if monitor.is_alive():
+                    raise RuntimeError("process-exit monitor did not finish")
                 return {"pid": 1234}
 
         handle = self.service.launch(
