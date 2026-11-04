@@ -193,7 +193,7 @@ class BoundedDownloader:
                     remaining_time = deadline - time.monotonic()
                     if remaining_time <= 0:
                         raise DownloadError("download exceeded total operation timeout")
-                    chunk = response.read(min(self.chunk_size, entry.size - received + 1))
+                    chunk = read_chunk(min(self.chunk_size, entry.size - received + 1))
                     if not chunk:
                         break
                     received += len(chunk)
