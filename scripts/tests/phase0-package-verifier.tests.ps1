@@ -130,3 +130,6 @@ try {
 finally {
     Remove-Item -LiteralPath $work -Recurse -Force -ErrorAction SilentlyContinue
 }
+
+# Expected negative fixtures set LASTEXITCODE to 1; all assertions above determine the test result.
+exit 0
