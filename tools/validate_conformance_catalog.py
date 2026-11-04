@@ -51,9 +51,10 @@ def validate_catalog(payload: Any) -> list[str]:
     if not isinstance(payload, dict):
         return ["catalog root must be a JSON object"]
 
-    if payload.get("catalog_version") != 1:
+    if type(payload.get("catalog_version")) is not int or payload.get("catalog_version") != 1:
         errors.append("catalog_version must be integer 1")
-    if payload.get("catalog_status") not in {"planning", "active", "retired"}:
+    catalog_status = payload.get("catalog_status")
+    if not isinstance(catalog_status, str) or catalog_status not in {"planning", "active", "retired"}:
         errors.append("catalog_status must be planning, active, or retired")
     if not _non_empty_string(payload.get("protocol")):
         errors.append("protocol must be a non-empty string")
@@ -95,7 +96,7 @@ def validate_catalog(payload: Any) -> list[str]:
                 errors.append(f"{prefix}.{field} must be a non-empty string")
 
         category = case.get("category")
-        if category not in set(PREFIX_CATEGORY.values()):
+        if not isinstance(category, str) or category not in set(PREFIX_CATEGORY.values()):
             errors.append(f"{prefix}.category is not recognized")
 
         for field in ("product_surfaces", "contract_dependencies", "evidence_required"):
@@ -120,7 +121,8 @@ def validate_catalog(payload: Any) -> list[str]:
         if not isinstance(case.get("mandatory"), bool):
             errors.append(f"{prefix}.mandatory must be a boolean")
 
-        if case.get("lifecycle") not in ALLOWED_LIFECYCLES:
+        lifecycle = case.get("lifecycle")
+        if not isinstance(lifecycle, str) or lifecycle not in ALLOWED_LIFECYCLES:
             errors.append(
                 f"{prefix}.lifecycle must be one of: {', '.join(sorted(ALLOWED_LIFECYCLES))}"
             )
