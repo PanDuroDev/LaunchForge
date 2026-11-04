@@ -156,7 +156,24 @@ try {
         [void] [IO.Directory]::CreateDirectory([IO.Path]::GetDirectoryName($destination))
         $inputStream = $entry.Open()
         $outputStream = [IO.File]::Open($destination, [IO.FileMode]::CreateNew, [IO.FileAccess]::Write, [IO.FileShare]::None)
-        try { $inputStream.CopyTo($outputStream) }
+        [long] $entryBytesWritten = 0
+        $buffer = New-Object byte[] 65536
+        try {
+            while (($bytesRead = $inputStream.Read($buffer, 0, $buffer.Length)) -gt 0) {
+                $entryBytesWritten += $bytesRead
+                $expandedBytes += $bytesRead
+                if ($expandedBytes -gt 536870912) {
+                    throw "The ZIP expands beyond the 512 MiB safety limit while extracting."
+                }
+                if ($entryBytesWritten -gt [long] $entry.Length) {
+                    throw "The extracted entry exceeds its declared ZIP length: $entryName"
+                }
+                $outputStream.Write($buffer, 0, $bytesRead)
+            }
+            if ($entryBytesWritten -ne [long] $entry.Length) {
+                throw "The extracted entry length does not match its ZIP metadata: $entryName"
+            }
+        }
         finally {
             $outputStream.Dispose()
             $inputStream.Dispose()
@@ -184,7 +201,237 @@ try {
 
     $packageFiles = @(Get-ChildItem -LiteralPath $extractRoot -File -Recurse -Force)
     $unexpectedNativeFiles = @($packageFiles | Where-Object {
-        $_.Extension -match '^\.(exe|dll|node)$' -and $_.Name -ine $executableName
+        $_.Extension -match '^\.(exe|dll|node)    })
+    if ($unexpectedNativeFiles.Count -gt 0) {
+        throw "Unexpected additional native binaries: $($unexpectedNativeFiles.Name -join ', ')"
+    }
+    $report.package.fileCount = $packageFiles.Count
+    $report.package.executableSha256 = (Get-FileHash -LiteralPath $executablePath -Algorithm SHA256).Hash.ToLowerInvariant()
+    $report.checks.packageContents = "passed"
+
+    $metadata = Get-Content -LiteralPath $metadataPath -Raw | ConvertFrom-Json
+    if ($metadata.format -ne "launchforge.export" -or [int] $metadata.buildContractVersion -ne 1 -or
+        [int] $metadata.projectSchemaVersion -ne 1 -or [string]::IsNullOrWhiteSpace([string] $metadata.renderer)) {
+        throw "BUILD-METADATA.json does not describe a supported LaunchForge v1 export."
+    }
+    if (-not (Test-Sha256 ([string] $metadata.assetManifestSha256)) -or
+        -not (Test-Sha256 ([string] $metadata.applicationIconSha256)) -or
+        [string]::IsNullOrWhiteSpace([string] $metadata.applicationIconAssetId)) {
+        throw "Build metadata is missing a valid asset-manifest or application-icon digest."
+    }
+
+    $manifest = @($metadata.assetManifest)
+    if ($manifest.Count -lt 1) { throw "Build metadata contains no declared asset manifest." }
+    $assetIds = @($manifest | ForEach-Object { [string] $_.id })
+    if (@($assetIds | Select-Object -Unique).Count -ne $assetIds.Count) {
+        throw "The asset manifest contains duplicate asset IDs."
+    }
+
+    $sortedAssetIds = [string[]] @($assetIds)
+    [Array]::Sort($sortedAssetIds, [StringComparer]::Ordinal)
+    if (($sortedAssetIds -join "|") -cne ($assetIds -join "|")) {
+        throw "The asset manifest must be sorted by stable asset ID."
+    }
+
+    $canonicalEntries = @(
+        foreach ($asset in $manifest) {
+            $assetId = [string] $asset.id
+            $assetKind = [string] $asset.kind
+            $assetPath = [string] $asset.path
+            $assetHash = [string] $asset.sha256
+            $parsedId = [Guid]::Empty
+            if ($assetId -cne $assetId.ToLowerInvariant() -or
+                -not [Guid]::TryParseExact($assetId, "D", [ref] $parsedId) -or
+                $assetId.Substring(14, 1) -ne "4" -or
+                $assetId.Substring(19, 1) -notin @("8", "9", "a", "b") -or
+                $assetKind -notin @("image", "applicationIcon") -or
+                -not (Test-Sha256 $assetHash)) {
+                throw "The asset manifest contains an invalid ID, kind, or SHA-256 value."
+            }
+
+            if (-not $assetPath.StartsWith("assets/", [StringComparison]::Ordinal) -or
+                $assetPath.Length -le 7 -or
+                $assetPath.Contains("\") -or
+                $assetPath.Contains(":") -or
+                $assetPath.EndsWith(".") -or
+                $assetPath.EndsWith(" ")) {
+                throw "The asset manifest contains a non-portable project asset path."
+            }
+            $assetFileName = $assetPath.Substring(7)
+            if ($assetFileName -match '[^A-Za-z0-9._-]' -or
+                $assetFileName.StartsWith(".") -or
+                $assetFileName.EndsWith(".")) {
+                throw "The asset manifest contains a non-portable Windows filename."
+            }
+            $assetStem = [IO.Path]::GetFileNameWithoutExtension($assetFileName).ToUpperInvariant()
+            if ($assetStem -in @("CON", "PRN", "AUX", "NUL", "COM1", "COM2", "COM3", "COM4", "COM5", "COM6", "COM7", "COM8", "COM9", "LPT1", "LPT2", "LPT3", "LPT4", "LPT5", "LPT6", "LPT7", "LPT8", "LPT9")) {
+                throw "The asset manifest contains a reserved Windows device filename."
+            }
+            if ($assetKind -eq "applicationIcon" -and -not $assetPath.EndsWith(".ico", [StringComparison]::Ordinal)) {
+                throw "An applicationIcon asset must use a lowercase .ico path."
+            }
+            if ($assetKind -eq "image" -and $assetPath.EndsWith(".ico", [StringComparison]::OrdinalIgnoreCase)) {
+                throw "An ICO asset must be classified as applicationIcon."
+            }
+
+            '{"id":"' + $assetId + '","kind":"' + $assetKind + '","path":"' + $assetPath + '","sha256":"' + $assetHash + '"}'
+        }
+    )
+    $canonicalManifest = "[" + ($canonicalEntries -join ",") + "]"
+    $hasher = [Security.Cryptography.SHA256]::Create()
+    try {
+        $computedManifestHash = [BitConverter]::ToString(
+            $hasher.ComputeHash([Text.Encoding]::UTF8.GetBytes($canonicalManifest))
+        ).Replace("-", "").ToLowerInvariant()
+    }
+    finally {
+        $hasher.Dispose()
+    }
+    if ($computedManifestHash -cne ([string] $metadata.assetManifestSha256).ToLowerInvariant()) {
+        throw "The declared assetManifestSha256 does not match the canonical asset manifest."
+    }
+    $iconEntries = @($manifest | Where-Object {
+        $_.id -eq $metadata.applicationIconAssetId -and $_.kind -eq "applicationIcon"
+    })
+    if ($iconEntries.Count -ne 1 -or $iconEntries[0].sha256 -ne $metadata.applicationIconSha256) {
+        throw "The application icon reference does not resolve to one matching applicationIcon manifest entry."
+    }
+
+    $report.build = [ordered]@{
+        projectSchemaVersion = [int] $metadata.projectSchemaVersion
+        renderer = [string] $metadata.renderer
+        assetCount = $manifest.Count
+        assetManifestSha256 = [string] $metadata.assetManifestSha256
+        applicationIconAssetId = [string] $metadata.applicationIconAssetId
+        applicationIconSha256 = [string] $metadata.applicationIconSha256
+    }
+    $report.checks.buildMetadata = "passed"
+
+    if ($ValidateOnly) {
+        $report.checks.standardUser = "not-run"
+        $report.checks.webView2Runtime = "not-run"
+        $report.checks.applicationWindow = "not-run"
+        $report.checks.processLifetime = "not-run"
+    }
+    else {
+        $identity = [Security.Principal.WindowsIdentity]::GetCurrent()
+        $principal = New-Object Security.Principal.WindowsPrincipal($identity)
+        $adminSid = [Security.Principal.SecurityIdentifier]::new([Security.Principal.WellKnownSidType]::BuiltinAdministratorsSid, $null)
+        $isAdminMember = @($identity.Groups | ForEach-Object { $_.Value }) -contains $adminSid.Value
+        $isElevated = $principal.IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator) -or $isAdminMember
+        $os = Get-CimInstance Win32_OperatingSystem
+        $report.environment = [ordered]@{
+            os = $os.Caption
+            osVersion = $os.Version
+            architecture = $env:PROCESSOR_ARCHITECTURE
+            cpu = (Get-CimInstance Win32_Processor | Select-Object -First 1 -ExpandProperty Name)
+            logicalProcessors = [Environment]::ProcessorCount
+            totalMemoryMB = [Math]::Round($os.TotalVisibleMemorySize / 1024, 0)
+            standardUser = (-not $isElevated)
+            developerToolsPresent = @("node", "npm", "rustc", "cargo", "dotnet") | Where-Object {
+                $null -ne (Get-Command $_ -ErrorAction SilentlyContinue)
+            }
+        }
+        if ($isElevated) { throw "Run this check from a standard user account that is not a member of Administrators." }
+        $report.checks.standardUser = "passed"
+
+        $webView2 = @(Get-WebView2Installations)
+        $report.environment.webView2Versions = @($webView2 | ForEach-Object version)
+        if ($webView2.Count -eq 0) {
+            throw "Microsoft Edge WebView2 Runtime was not found. This portable spike does not bundle the runtime."
+        }
+        $report.checks.webView2Runtime = "passed"
+
+        $launchWatch = [Diagnostics.Stopwatch]::StartNew()
+        $process = Start-Process -FilePath $executablePath -WorkingDirectory $extractRoot -PassThru
+        $deadline = [DateTime]::UtcNow.AddSeconds($WindowTimeoutSeconds)
+        $windowHandle = [IntPtr]::Zero
+        while ([DateTime]::UtcNow -lt $deadline) {
+            $process.Refresh()
+            if ($process.HasExited) { throw "The standalone host exited before creating its main window." }
+            if ($process.MainWindowHandle -ne [IntPtr]::Zero) {
+                $windowHandle = $process.MainWindowHandle
+                break
+            }
+            Start-Sleep -Milliseconds 200
+        }
+        if ($windowHandle -eq [IntPtr]::Zero) {
+            throw "No main window handle appeared within $WindowTimeoutSeconds seconds."
+        }
+        $launchWatch.Stop()
+        $windowTitle = $process.MainWindowTitle
+        if ($windowTitle -notmatch "LaunchForge") {
+            throw "The process created a window, but its title was unexpected: $windowTitle"
+        }
+        $report.startupToWindowHandleMs = [Math]::Round($launchWatch.Elapsed.TotalMilliseconds, 2)
+        $report.windowTitle = $windowTitle
+        $report.checks.applicationWindow = "passed"
+
+        Start-Sleep -Seconds 2
+        $snapshot = @(Get-CimInstance -ClassName Win32_Process)
+        $treeIds = @(Get-ProcessTreeIds -RootPid $process.Id -Snapshot $snapshot)
+        $webViewProcesses = @($snapshot | Where-Object {
+            $treeIds -contains [int] $_.ProcessId -and $_.Name -ieq "msedgewebview2.exe"
+        })
+        $report.observedWebView2ProcessCount = $webViewProcesses.Count
+
+        $smokeDeadline = [DateTime]::UtcNow.AddSeconds($SmokeSeconds)
+        while ([DateTime]::UtcNow -lt $smokeDeadline) {
+            $process.Refresh()
+            if ($process.HasExited) {
+                throw "The standalone host exited during the $SmokeSeconds-second smoke window."
+            }
+            Start-Sleep -Seconds 1
+        }
+        $report.processId = $process.Id
+        $report.checks.processLifetime = "passed"
+    }
+
+    $report.status = "passed"
+}
+catch {
+    $report.status = "failed"
+    $report.failure = $_.Exception.Message
+}
+finally {
+    if ($null -ne $process) {
+        try {
+            $snapshot = @(Get-CimInstance -ClassName Win32_Process -ErrorAction SilentlyContinue)
+            $treeIds = @(Get-ProcessTreeIds -RootPid $process.Id -Snapshot $snapshot)
+            foreach ($id in $treeIds) {
+                if ($id -ne $process.Id) { Stop-Process -Id $id -Force -ErrorAction SilentlyContinue }
+            }
+            Stop-Process -Id $process.Id -Force -ErrorAction SilentlyContinue
+        }
+        catch {
+            # Cleanup must not hide the original validation result.
+        }
+    }
+    if ($null -ne $archive) { $archive.Dispose() }
+    if ($extractRoot -and (Test-Path -LiteralPath $extractRoot)) {
+        Remove-Item -LiteralPath $extractRoot -Recurse -Force -ErrorAction SilentlyContinue
+    }
+
+    $report.completedAtUtc = [DateTime]::UtcNow.ToString("o")
+    $reportPath = [IO.Path]::GetFullPath($OutputPath)
+    $reportDirectory = [IO.Path]::GetDirectoryName($reportPath)
+    if ($reportDirectory) { [void] [IO.Directory]::CreateDirectory($reportDirectory) }
+    $json = ConvertTo-Json -InputObject $report -Depth 10
+    [IO.File]::WriteAllText($reportPath, $json, (New-Object System.Text.UTF8Encoding($false)))
+}
+
+if ($report.status -ne "passed") {
+    Write-Host "Phase 0 package verification FAILED: $($report.failure)" -ForegroundColor Red
+    Write-Host "Report: $([IO.Path]::GetFullPath($OutputPath))"
+    exit 1
+}
+
+Write-Host "Phase 0 package verification PASSED."
+Write-Host "Report: $([IO.Path]::GetFullPath($OutputPath))"
+if (-not $ValidateOnly) {
+    Write-Host "Startup to main-window handle: $($report.startupToWindowHandleMs) ms (not first-frame latency)."
+}
+ -and $_.FullName -ine $executablePath
     })
     if ($unexpectedNativeFiles.Count -gt 0) {
         throw "Unexpected additional native binaries: $($unexpectedNativeFiles.Name -join ', ')"
