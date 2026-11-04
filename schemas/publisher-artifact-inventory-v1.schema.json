@@ -237,9 +237,7 @@
                 "signing": {
                   "properties": {
                     "status": {
-                      "not": {
-                        "const": "unsigned"
-                      }
+                      "const": "signed"
                     }
                   }
                 }
