@@ -1,0 +1,14 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "launchforge-delivery-prototype"
+version = "0.1.0"
+description = "Isolated Phase 4.1 manifest and bounded-download prototype for LaunchForge"
+requires-python = ">=3.10"
+dependencies = ["cryptography>=41.0"]
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["launchforge_delivery*"]
