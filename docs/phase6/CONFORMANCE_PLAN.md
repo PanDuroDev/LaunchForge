@@ -266,14 +266,14 @@ The traceability map is provisional. Do not encode candidate schema/API details 
 
 - Phase 0 PR #16's first Tauri run [#41919048099](https://github.com/PanDuroDev/LaunchForge/actions/runs/41919048099) failed because `poc/src-tauri/icons/icon.ico` was missing. That was fixed: the subsequent Windows run [#41919850333](https://github.com/PanDuroDev/LaunchForge/actions/runs/41919850333) passed contract/renderer tests, renderer export, Rust lockfile generation/build, host smoke test, portable packaging and artifact upload. However, the latest head [#41920824672](https://github.com/PanDuroDev/LaunchForge/actions/runs/41920824672) fails 12/13 tests at `poc/tests/phase0.test.mjs:53`: the ICO negative fixture truncates the last file byte, which may be outside declared image payload ranges. Correct the fixture and rerun. The current Phase 0 tree still has no tracked `poc/src-tauri/Cargo.lock`; commit/review it. Clean-machine/WebView2, DPI/accessibility and performance evidence remain outstanding.
 - Phase 4 PR #17 is POSIX-only and explicitly has no Windows backend. Its 40 local tests do not demonstrate Windows/NTFS path safety, reparse-point handling, real host process launch or power-loss recovery.
-- Phase 0's candidate JSON Schema accepts uppercase and lowercase UUIDv4 hex, while the semantic validator regex accepts lowercase only. The integration owner must choose and test one canonical rule before Phase 1 freezes the schema.
+- Phase 0's latest candidate resolves UUIDv4 to canonical lowercase-only in both JSON Schema and the semantic validator. Phase 1.1 Draft PR #20 currently claims case-insensitive UUID identity; this is a concrete contract-consumption mismatch that must be aligned before P1-A acceptance.
 - Phase 5 PR #18 records **FAIL / NO-GO** because the accepted Runtime/package, supported Windows baseline, updater, clean-machine install/recovery evidence and Runtime diagnostics integration are absent. PRs #14 and #15 remain unmerged QA/design contributions, not a production updater.
 
 These failures and boundaries keep executable Phase 6 product conformance, 6.2 expansion selection, and 6.3 support blocked. Do not lower the gate because isolated test suites pass on another OS or a reference prototype passes.
 
 ## 11. Newly tracked project-format cases
 
-- `LF-COMPAT-007` requires the approved UUID canonicalization rule to be implemented identically by the project JSON Schema and semantic validator, including stable-ID uniqueness for case variants.
+- `LF-COMPAT-007` requires the approved UUID canonicalization rule to be implemented identically by the project JSON Schema and semantic validator; the latest Phase 0 candidate is canonical lowercase-only, so uppercase spellings must be rejected unless the integration owner approves a replacement rule.
 - `LF-COMPAT-008` requires the approved application-icon reference to validate and the complete declared ICO payload to be bounded and embedded byte-for-byte in the package.
 
-Both remain planned until Phase 0/1 approves the source contracts and supplies runnable fixtures. The catalog does not choose UUID casing or add schema fields.
+Both remain planned until Phase 0/1 approves the source contracts and supplies runnable fixtures. The catalog records the current candidate rule but does not itself approve or change schema fields.
