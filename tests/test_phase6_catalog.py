@@ -88,6 +88,24 @@ class ConformanceCatalogTests(unittest.TestCase):
         self.assertIn("phase0:filesystem-security-policy", icon_case["contract_dependencies"])
         self.assertIn("packaged resource bytes", icon_case["expected_behavior"])
 
+    def test_phase3_data_binding_and_network_egress_cases_are_planned(self):
+        """Keep data mapping and host egress requirements explicit before integration."""
+        cases = {case["test_id"]: case for case in self.catalog["cases"]}
+        mapping = cases["LF-CAP-006"]
+        egress = cases["LF-SEC-006"]
+
+        self.assertEqual(mapping["category"], "capability")
+        self.assertEqual(mapping["lifecycle"], "planned")
+        self.assertIn("phase3:data-binding-contract", mapping["contract_dependencies"])
+        self.assertIn("RFC 6901", mapping["scenario"])
+        self.assertIn("fail closed", mapping["expected_behavior"])
+
+        self.assertEqual(egress["category"], "security")
+        self.assertEqual(egress["lifecycle"], "planned")
+        self.assertIn("phase3:network-egress-policy", egress["contract_dependencies"])
+        self.assertIn("DNS-rebinding", egress["scenario"])
+        self.assertIn("at connection time", egress["expected_behavior"])
+
     def test_dependency_registry_matches_case_references(self):
         """Require a unique registry containing every and only referenced dependency."""
         referenced = {
