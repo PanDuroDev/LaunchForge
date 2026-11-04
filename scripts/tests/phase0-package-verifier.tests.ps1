@@ -13,13 +13,19 @@ function New-TestPackage {
         [bool] $IncludeLockfile = $true,
         [bool] $ValidIconReference = $true,
         [bool] $ValidManifestDigest = $true,
-        [string] $AssetPath = "assets/-sample-cover-.svg"
+        [string] $AssetPath = "assets/-sample-cover-.svg",
+        [bool] $IncludeNestedNativeBinary = $false
     )
 
     $folder = Join-Path (Split-Path -Parent $ZipPath) ([IO.Path]::GetFileNameWithoutExtension($ZipPath))
     [void] [IO.Directory]::CreateDirectory($folder)
 
     [IO.File]::WriteAllText((Join-Path $folder "launchforge_phase0_spike.exe"), "MZ-test-placeholder-not-executed")
+    if ($IncludeNestedNativeBinary) {
+        $nestedFolder = Join-Path $folder "nested"
+        [void] [IO.Directory]::CreateDirectory($nestedFolder)
+        [IO.File]::WriteAllText((Join-Path $nestedFolder "launchforge_phase0_spike.exe"), "MZ-unexpected-nested-binary")
+    }
     if ($IncludeLockfile) {
         [IO.File]::WriteAllText((Join-Path $folder "Cargo.lock"), "# generated fixture lockfile")
     }
@@ -115,6 +121,7 @@ try {
     $missingLock = Invoke-Verifier -ZipPath $missingLockZip -ReportPath $missingLockReport
     Assert-True ($missingLock.exitCode -ne 0) "A package without Cargo.lock was accepted."
     Assert-True ($missingLock.report.status -eq "failed") "Missing-lockfile failure was not written to the report."
+    Assert-True ($missingLock.report.failure -match "Cargo.lock") "The missing-lockfile fixture failed for an unexpected reason."
     Write-Host "PASS: package without the reviewed Cargo.lock is rejected."
 
     $badIconZip = Join-Path $work "bad-icon.zip"
@@ -122,7 +129,16 @@ try {
     New-TestPackage -ZipPath $badIconZip -ValidIconReference $false
     $badIcon = Invoke-Verifier -ZipPath $badIconZip -ReportPath $badIconReport
     Assert-True ($badIcon.exitCode -ne 0) "A package with a dangling application-icon reference was accepted."
+    Assert-True ($badIcon.report.failure -match "application icon reference") "The dangling-icon fixture failed for an unexpected reason."
     Write-Host "PASS: dangling application-icon references are rejected."
+
+    $nestedBinaryZip = Join-Path $work "nested-binary.zip"
+    $nestedBinaryReport = Join-Path $work "nested-binary-report.json"
+    New-TestPackage -ZipPath $nestedBinaryZip -IncludeNestedNativeBinary $true
+    $nestedBinary = Invoke-Verifier -ZipPath $nestedBinaryZip -ReportPath $nestedBinaryReport
+    Assert-True ($nestedBinary.exitCode -ne 0) "A package with an extra nested native binary was accepted."
+    Assert-True ($nestedBinary.report.failure -match "additional native binaries") "The nested-binary fixture failed for an unexpected reason."
+    Write-Host "PASS: additional nested native binaries are rejected."
 
     $badManifestZip = Join-Path $work "bad-manifest.zip"
     $badManifestReport = Join-Path $work "bad-manifest-report.json"
