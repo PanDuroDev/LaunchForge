@@ -235,17 +235,32 @@ class GameLifecycleService:
                 self._busy = False
 
     def process_exited(self, exit_code: Optional[int] = None) -> None:
-        """Called by the native Runtime adapter when its process handle exits."""
-        if self.snapshot.state != GameState.RUNNING:
-            raise TransactionError("process-exit event received while the game is not running")
-        self._process_handle = None
-        self._set(GameState.READY, message="Game process exited" if exit_code is None else f"Game process exited ({exit_code})")
+        """Atomically publish the game-process exit and release the running-state gate."""
+        with self._lock:
+            if self._snapshot.state != GameState.RUNNING or self._process_handle is None:
+                raise TransactionError("process-exit event received while the game is not running")
+            self._process_handle = None
+            current = self._snapshot
+            message = "Game process exited" if exit_code is None else f"Game process exited ({exit_code})"
+            snapshot = GameSnapshot(
+                operation_id=current.operation_id,
+                game_id=current.game_id,
+                state=GameState.READY,
+                version=current.version,
+                completed_bytes=current.completed_bytes,
+                total_bytes=current.total_bytes,
+                message=message,
+            )
+            self._snapshot = snapshot
+        self._notify(snapshot)
 
     def _begin(self, game_id: str, version: str, total: int, state: GameState) -> None:
         """Start a new lifecycle operation after enforcing single-operation exclusivity."""
         with self._lock:
             if self._busy:
                 raise TransactionError("another game operation is already running")
+            if self._snapshot.state in (GameState.LAUNCHING, GameState.RUNNING):
+                raise TransactionError("game operations are blocked while the game process is launching or running")
             self._busy = True
             self._cancel.clear()
             snapshot = GameSnapshot(uuid.uuid4().hex, game_id, state, version, 0, total, state.value)

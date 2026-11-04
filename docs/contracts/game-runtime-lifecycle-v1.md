@@ -23,7 +23,7 @@ idle -> downloading -> staging -> committing -> verifying -> installed -> ready 
 
 downloading is present only when apply_verified_manifest uses a provider; direct install/update/repair calls begin at staging.
 
-Errors and cancellations are terminal for an operation: error or cancelled. The snapshot includes an operation ID, game ID, version, bytes complete/total, message and an error code. Byte progress is emitted while staging; the commit phase is intentionally non-cancellable because interruption safety is provided by the transaction journal/recovery algorithm.
+Errors and cancellations are terminal for an operation: error or cancelled. The snapshot includes an operation ID, game ID, version, bytes complete/total, message and an error code. Byte progress is emitted while staging; the commit phase is intentionally non-cancellable because interruption safety is provided by the transaction journal/recovery algorithm. The lifecycle service rejects all new delivery/verification/launch operations while the game process is launching or running. The native Runtime must report process exit before an update, repair, verification, or second launch may begin.
 
 Proposed error codes should be standardized with the Runtime owner: manifest_untrusted, download_failed, integrity_mismatch, storage_limit, insufficient_space, cancelled, transaction_recovery_required, install_path_unsafe, launch_not_declared, launch_blocked, and process_start_failed.
 

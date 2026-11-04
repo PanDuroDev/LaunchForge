@@ -93,6 +93,31 @@ class LifecycleTests(unittest.TestCase):
         self.service.process_exited(0)
         self.assertEqual(self.service.snapshot.state, GameState.READY)
 
+    def test_update_is_blocked_while_game_is_running(self):
+        """Verify that update is blocked while game is running behaves as expected."""
+        self.service.install("sample.game", "1", self.artifacts)
+        runtime = FakeRuntime()
+        self.service.launch("sample.game", "1", [self.record], runtime)
+        original = (self.install_dir / "bin/Game.exe").read_bytes()
+
+        replacement = self.base / "Game-v2.exe"
+        replacement.write_bytes(b"next release while old process is active")
+        new_record = FileRecord(
+            "bin/Game.exe",
+            replacement.stat().st_size,
+            hashlib.sha256(replacement.read_bytes()).hexdigest(),
+        )
+        with self.assertRaisesRegex(TransactionError, "while the game process"):
+            self.service.update("sample.game", "2", [Artifact(new_record, replacement)])
+
+        self.assertEqual((self.install_dir / "bin/Game.exe").read_bytes(), original)
+        self.assertEqual(self.service.snapshot.state, GameState.RUNNING)
+
+        self.service.process_exited(0)
+        result = self.service.update("sample.game", "2", [Artifact(new_record, replacement)])
+        self.assertEqual(result.version, "2")
+        self.assertEqual((self.install_dir / "bin/Game.exe").read_bytes(), replacement.read_bytes())
+
     def test_launch_bridge_accepts_only_configured_game_id(self):
         """Verify that launch bridge accepts only configured game id behaves as expected."""
         self.service.install("sample.game", "1", self.artifacts)
