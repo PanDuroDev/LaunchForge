@@ -139,6 +139,21 @@ class PublisherInventoryTests(unittest.TestCase):
         self.inventory["artifacts"][0]["path"] = "artifacts/launcher.exe:secret"
         self.assert_invalid("alternate-stream")
 
+    def test_rejects_reserved_windows_device_name(self) -> None:
+        self.inventory["artifacts"][0]["path"] = "artifacts/CON.exe"
+        self.assert_invalid("reserved Windows device name")
+
+    def test_rejects_windows_forbidden_path_character(self) -> None:
+        self.inventory["artifacts"][0]["path"] = "artifacts/launcher?.exe"
+        self.assert_invalid("character forbidden in Windows paths")
+
+    def test_rejects_case_insensitive_duplicate_paths(self) -> None:
+        duplicate = dict(self.inventory["artifacts"][0])
+        duplicate["name"] = "another-name.exe"
+        duplicate["path"] = "artifacts/LAUNCHER.exe"
+        self.inventory["artifacts"].append(duplicate)
+        self.assert_invalid("duplicate artifact path (case-insensitive)")
+
     def test_rejects_hash_mismatch(self) -> None:
         self.inventory["artifacts"][0]["sha256"] = "0" * 64
         self.assert_invalid("SHA-256 mismatch")
