@@ -237,15 +237,14 @@ try {
                 $assetPath.Length -le 7 -or
                 $assetPath.Contains("\") -or
                 $assetPath.Contains(":") -or
-                $assetPath.Contains("..") -or
                 $assetPath.EndsWith(".") -or
                 $assetPath.EndsWith(" ")) {
                 throw "The asset manifest contains a non-portable project asset path."
             }
             $assetFileName = $assetPath.Substring(7)
             if ($assetFileName -match '[^A-Za-z0-9._-]' -or
-                $assetFileName.Substring(0, 1) -match '[^A-Za-z0-9_]' -or
-                $assetFileName.Substring($assetFileName.Length - 1, 1) -match '[^A-Za-z0-9_]') {
+                $assetFileName.StartsWith(".") -or
+                $assetFileName.EndsWith(".")) {
                 throw "The asset manifest contains a non-portable Windows filename."
             }
             $assetStem = [IO.Path]::GetFileNameWithoutExtension($assetFileName).ToUpperInvariant()
