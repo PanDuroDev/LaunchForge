@@ -139,7 +139,7 @@ class DiagnosticSanitizerTests(unittest.TestCase):
             sanitize_jsonl(raw)
 
     def test_oversized_record_is_dropped(self) -> None:
-        oversized = b" " * (64 * 1024 + 1)
+        oversized = b"x" * (64 * 1024 + 1)
         output, stats = sanitize_jsonl(oversized)
         self.assertEqual(output, b"")
         self.assertEqual(stats.dropped_records, 1)
