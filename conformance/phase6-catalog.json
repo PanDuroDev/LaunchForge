@@ -133,8 +133,8 @@
       "test_id": "LF-COMPAT-007",
       "category": "project-format",
       "title": "Align UUID schema and semantic validation",
-      "scenario": "Validate UUIDv4 boundary values and entity identifiers across every schema and semantic validator used by a supported project format, including uppercase/lowercase variants where the schema permits them.",
-      "expected_behavior": "The schema and semantic validator implement the same approved UUID canonicalization policy. Case variants cannot bypass project-wide stable-ID uniqueness, and accepted fixtures round-trip without identifier rewriting.",
+      "scenario": "Exercise canonical lowercase UUIDv4 identifiers, uppercase spellings, malformed version/variant bits, and case-variant duplicates across project, assets, games, and components in the candidate schema and semantic validator.",
+      "expected_behavior": "Once the v1 rule is approved, the schema and semantic validator both enforce canonical lowercase UUIDv4 strings and reject uppercase spellings. Entity IDs remain unique across the entire project, and accepted fixtures round-trip without identifier rewriting.",
       "product_surfaces": [
         "studio",
         "exported_launcher"
@@ -144,10 +144,10 @@
         "phase1:project-validation"
       ],
       "evidence_required": [
-        "approved UUID canonicalization rule",
-        "valid and invalid UUID fixtures",
+        "integration-owner-approved lowercase UUIDv4 canonicalization rule",
+        "valid lowercase and rejected uppercase/malformed UUID fixtures",
         "schema-versus-semantic-validator result comparison",
-        "duplicate-ID case-variant result"
+        "duplicate-ID detection across project/assets/games/components"
       ],
       "mandatory": true,
       "lifecycle": "planned"
