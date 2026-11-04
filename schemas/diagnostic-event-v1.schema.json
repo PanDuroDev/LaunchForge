@@ -43,26 +43,8 @@
     },
     "event_code": {
       "type": "string",
-      "description": "Fixed event-code registry; arbitrary LF_-prefixed values are not accepted.",
-      "enum": [
-        "LF_APP_START_FAILED",
-        "LF_BOOTSTRAP_FAILED",
-        "LF_CONNECTION_FAILED",
-        "LF_EXPORT_FAILED",
-        "LF_GAME_INSTALL_FAILED",
-        "LF_GAME_LAUNCH_FAILED",
-        "LF_GAME_REPAIR_FAILED",
-        "LF_GAME_UPDATE_FAILED",
-        "LF_GAME_VERIFY_FAILED",
-        "LF_PROJECT_LOAD_FAILED",
-        "LF_PROJECT_SAVE_FAILED",
-        "LF_RECOVERY_REQUIRED",
-        "LF_RECOVERY_SUCCEEDED",
-        "LF_UPDATE_CHECK_FAILED",
-        "LF_UPDATE_FAILED",
-        "LF_UPDATE_ROLLBACK",
-        "LF_UPDATE_SUCCEEDED"
-      ]
+      "description": "No Runtime/Studio event-code registry has been approved; all values are rejected until a reviewed source of truth is defined.",
+      "enum": []
     },
     "outcome": {
       "enum": [
