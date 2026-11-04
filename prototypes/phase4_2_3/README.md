@@ -15,7 +15,7 @@
 
 ## Phase 4.3: lifecycle boundary
 
-GameLifecycleService exposes synchronous install/update/repair/verify/launch states with operation IDs, byte progress, cancellation, structured terminal errors and a narrow LauncherAdapter protocol. It rejects new delivery or verification work while a game process is launching or running; the native process-exit event releases that gate. It never calls subprocess or a shell. The native Runtime adapter must re-open the declared executable handle-relatively, validate the expected hash/reparse state, and launch with an argument vector under the approved process policy.
+GameLifecycleService exposes synchronous install/update/repair/verify/launch states with operation IDs, byte progress, cancellation, structured terminal errors and a narrow LauncherAdapter protocol. It rejects new delivery or verification work while a game process is launching or running; the native process-exit event releases that gate. An exit callback that races with launch_game returning is reconciled atomically, so an already-exited process is not published as RUNNING. It never calls subprocess or a shell. The native Runtime adapter must re-open the declared executable handle-relatively, validate the expected hash/reparse state, and launch with an argument vector under the approved process policy.
 
 VerifiedArtifactProvider and BoundedDownloaderProvider form a narrow seam to the 4.1 BoundedDownloader interface without importing the still-unmerged 4.1 PR. The provider requires a user-owned temp directory inaccessible to group/other, maps exactly the manifest paths, forwards download progress/cancellation, and cleans provider-created temp files after staging. Every file is re-opened and rehashed by the transaction engine.
 
