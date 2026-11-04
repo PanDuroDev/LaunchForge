@@ -130,6 +130,55 @@
       "lifecycle": "planned"
     },
     {
+      "test_id": "LF-COMPAT-007",
+      "category": "project-format",
+      "title": "Align UUID schema and semantic validation",
+      "scenario": "Validate UUIDv4 boundary values and entity identifiers across every schema and semantic validator used by a supported project format, including uppercase/lowercase variants where the schema permits them.",
+      "expected_behavior": "The schema and semantic validator implement the same approved UUID canonicalization policy. Case variants cannot bypass project-wide stable-ID uniqueness, and accepted fixtures round-trip without identifier rewriting.",
+      "product_surfaces": [
+        "studio",
+        "exported_launcher"
+      ],
+      "contract_dependencies": [
+        "phase0:project-format",
+        "phase1:project-validation"
+      ],
+      "evidence_required": [
+        "approved UUID canonicalization rule",
+        "valid and invalid UUID fixtures",
+        "schema-versus-semantic-validator result comparison",
+        "duplicate-ID case-variant result"
+      ],
+      "mandatory": true,
+      "lifecycle": "planned"
+    },
+    {
+      "test_id": "LF-COMPAT-008",
+      "category": "project-format",
+      "title": "Resolve and preserve the application icon asset reference",
+      "scenario": "Validate a project whose window references an application-icon asset, then inspect the exported Windows package; include missing references, wrong asset kinds, invalid ICO headers, and truncated declared image payloads.",
+      "expected_behavior": "The accepted project contract requires the window icon reference to resolve to an allowed application-icon asset. Invalid references or out-of-range ICO payloads fail closed before packaging, and the packaged resource bytes and reported digest match the validated source asset.",
+      "product_surfaces": [
+        "studio",
+        "exported_launcher"
+      ],
+      "contract_dependencies": [
+        "phase0:project-format",
+        "phase0:filesystem-security-policy",
+        "phase1:asset-reference-contract",
+        "phase1:build-validation"
+      ],
+      "evidence_required": [
+        "approved application-icon reference rule",
+        "valid and invalid project fixtures",
+        "ICO payload-range boundary fixtures",
+        "source and packaged resource SHA-256 comparison",
+        "sanitized build diagnostic"
+      ],
+      "mandatory": true,
+      "lifecycle": "planned"
+    },
+    {
       "test_id": "LF-MIG-001",
       "category": "migration",
       "title": "Migrate every supported source version",
