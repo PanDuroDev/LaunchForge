@@ -15,13 +15,14 @@
 | TUF-007 | Root version jumps from N to N+2 | Reject; fetch/verify consecutive N+1 chain only |
 | TUF-008 | Root N+1 signed by old threshold but not new threshold | Reject |
 | TUF-009 | Root N+1 signed by new threshold but not old threshold | Reject |
-| TUF-010 | Expired root/targets/snapshot/timestamp at fixed update start time | Reject; report expiry/freeze condition |
+| TUF-010A | Timestamp, Snapshot or Targets metadata is expired at the fixed update start time | Reject; report expiry/freeze condition |
+| TUF-010B | Trusted or intermediate Root is expired while a consecutive rotation chain reaches a fresh final Root | Follow TUF root-rotation flow; defer Root expiry validation until the final Root, then accept only if that final Root is fresh |
 | TUF-011 | Timestamp version lower than trusted | Reject rollback |
 | TUF-012 | Timestamp version equal but content differs | Reject inconsistency; unchanged version is not permission for changed bytes |
 | TUF-013 | Snapshot points to changed/missing/wrong-version Targets metadata | Reject mix-and-match |
 | TUF-014 | Targets length/hash differs from downloaded target bytes | Reject and delete temporary target |
 | TUF-015 | Expired metadata replayed by stale mirror | Reject |
-| TUF-016 | Repository withholds updates while returning stale timestamp | Expiry policy reports possible freeze; retain installed app |
+| TUF-016 | Repository withholds updates while returning an expired Timestamp | Expiry policy reports possible freeze; retain installed app |
 | TUF-017 | TUF root changes timestamp/snapshot signer | Follow conformant key-rotation and cached-state reset behavior; no ad-hoc reset |
 | TUF-018 | Multiple product/channel repositories share URLs but have distinct pinned roots | Never cross-accept metadata between repository identities |
 
@@ -36,7 +37,7 @@
 | REL-005 | Target application version is below installed version | Reject even if TUF signature/hash are valid |
 | REL-006 | Target application version is below persisted highest accepted release | Reject |
 | REL-007 | Beta/preview is offered to a stable installation | Do not silently switch channels |
-| REL-008 | A previous stable release is republished under the same immutable identity with different bytes | Publishing gate rejects; client metadata version/content checks reject inconsistency |
+| REL-008 | A previously accepted release identity (product/channel/platform/application version) is republished under a higher Targets metadata version with a different target length or digest | Publishing gate rejects; client compares its durable version-to-target binding and rejects the changed bytes even though the new metadata is otherwise valid |
 
 ## Source and resource-bound tests
 
