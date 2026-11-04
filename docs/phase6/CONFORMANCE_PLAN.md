@@ -226,3 +226,20 @@ Therefore all executable conformance cases in this document are currently **BLOC
 - The support matrix links to reproducible evidence and has a named maintainer.
 
 Until then, this protocol is a specification/handoff artifact and does not announce any added platform, renderer, extension API, or production support.
+
+
+## 7. Machine-readable catalog and metadata validation
+
+The planned cases are mirrored in `conformance/phase6-catalog.json`. Each entry records its stable test ID, category, scenario, expected behavior, applicable product surfaces, prerequisite-area labels, required evidence, mandatory flag, and lifecycle state.
+
+All 36 entries currently use `lifecycle: planned`. The dependency strings are planning labels only and are not approved API names or proof that the dependencies exist.
+
+Validate the catalog structure from the repository root:
+
+```sh
+python tools/validate_conformance_catalog.py
+python -m unittest discover -s tests -p "test_phase6_catalog.py" -v
+```
+
+The standard-library validator checks catalog metadata, not LaunchForge behavior. The unit tests cover valid catalog structure, all protocol families, duplicate IDs, category/ID consistency, missing dependencies, invalid surfaces, field types, and invalid roots. A successful catalog check must never be reported as a passing product conformance run.
+
