@@ -33,6 +33,7 @@ _REVISION_RE = re.compile(r"^(?:[0-9a-f]{40}|[0-9a-f]{64})$")
 _THUMBPRINT_RE = re.compile(r"^(?:[0-9A-Fa-f]{40}|[0-9A-Fa-f]{64})$")
 _PLATFORM_RE = re.compile(r"^windows-[a-z0-9][a-z0-9_-]{0,31}$")
 _RUN_ID_RE = re.compile(r"^[0-9]{1,32}$")
+_WINDOWS_DEVICE_NAMES = {"con", "prn", "aux", "nul"}
 _MAX_ARTIFACTS = 100
 _MAX_MANIFEST_BYTES = 1024 * 1024
 _MAX_ARTIFACT_BYTES = (1 << 63) - 1
@@ -120,6 +121,12 @@ def _safe_relative_path(value: Any, context: str) -> tuple[str, ...]:
         raise ValidationError(f"{context} contains an empty, current, or parent path segment")
     if any(part.endswith((".", " ")) for part in parts):
         raise ValidationError(f"{context} contains a Windows-ambiguous path segment")
+    if any(any(char in part for char in '<>"|?*') for part in parts):
+        raise ValidationError(f"{context} contains a character forbidden in Windows paths")
+    for part in parts:
+        device_stem = part.split(".", 1)[0].casefold()
+        if device_stem in _WINDOWS_DEVICE_NAMES or re.fullmatch(r"(?:com|lpt)[1-9]", device_stem):
+            raise ValidationError(f"{context} contains a reserved Windows device name")
     if any(":" in part for part in parts):
         raise ValidationError(f"{context} contains a Windows drive or alternate-stream delimiter")
     return tuple(parts)
@@ -282,16 +289,16 @@ def validate_inventory(
         name = _require_string(artifact["name"], f"{context}.name", maximum=255)
         if "/" in name or "\\" in name or name in {".", ".."}:
             raise ValidationError(f"{context}.name must be a filename, not a path")
-        if name in seen_names:
-            raise ValidationError(f"duplicate artifact name: {name}")
-        seen_names.add(name)
+        if name.casefold() in seen_names:
+            raise ValidationError(f"duplicate artifact name (case-insensitive): {name}")
+        seen_names.add(name.casefold())
 
         parts = _safe_relative_path(artifact["path"], f"{context}.path")
         relative_path = "/".join(parts)
-        if relative_path in seen_paths:
-            raise ValidationError(f"duplicate artifact path: {relative_path}")
-        seen_paths.add(relative_path)
-        if relative_path == manifest_name:
+        if relative_path.casefold() in seen_paths:
+            raise ValidationError(f"duplicate artifact path (case-insensitive): {relative_path}")
+        seen_paths.add(relative_path.casefold())
+        if relative_path.casefold() == manifest_name.casefold():
             raise ValidationError(f"{context}.path must not refer to the inventory itself")
 
         platform = artifact["platform"]
