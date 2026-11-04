@@ -270,3 +270,35 @@ The traceability map is provisional. Do not encode candidate schema/API details 
 - Phase 5 PR #18 records **FAIL / NO-GO** because the accepted Runtime/package, supported Windows baseline, updater, clean-machine install/recovery evidence and Runtime diagnostics integration are absent. PRs #14 and #15 remain unmerged QA/design contributions, not a production updater.
 
 These failures and boundaries keep executable Phase 6 product conformance, 6.2 expansion selection, and 6.3 support blocked. Do not lower the gate because isolated test suites pass on another OS or a reference prototype passes.
+
+
+## 11. Revalidation and inventory refresh (2026-11-05)
+
+This section supersedes the earlier 36-case inventory count and the older 2026-11-04 prerequisite snapshot above.
+
+The current machine-readable catalog contains **41 planned cases** across the same eight conformance areas, with **40 unique prerequisite-area labels** and **16 catalog unit tests**. All 41 cases remain `lifecycle: planned`; this is inventory/harness metadata, not product conformance.
+
+Five planned cases were added:
+
+| Test ID | Purpose | Upstream boundary |
+|---|---|---|
+| `LF-COMPAT-007` | Keep UUID policy, uniqueness, schema validation and semantic validation consistent. | Phase 0/1 owners must approve the canonical UUID rule; the case does not approve it. |
+| `LF-COMPAT-008` | Validate the application-icon reference, ICO payload ranges and packaged icon digest. | Requires approved Phase 0/1 schema and build behavior. |
+| `LF-CAP-006` | Verify deterministic typed JSON Pointer mapping, optional/default behavior and approved transforms. | Phase 3.1 prototype is merged, but mapping semantics and Studio/Runtime integration still need acceptance. |
+| `LF-SEC-006` | Verify host-enforced DNS/IP egress controls and DNS-rebinding resistance. | HTTPS/same-origin transport is not an egress policy; Phase 0/3 host enforcement remains required. |
+| `LF-PKG-006` | Preflight and smoke-verify the portable Windows package, including hostile ZIP inputs. | PR #23 verifier remains open; its latest head workflow failed and fresh-user VM acceptance is absent. |
+
+The added cases were deliberately kept planned. No project schema, Runtime API, renderer contract, migration interface, or platform-support claim was changed.
+
+### Updated upstream evidence
+
+- **Phase 0 / PR #16:** latest head Windows workflow [#41924747295](https://github.com/PanDuroDev/LaunchForge/actions/runs/41924747295) completed successfully. All steps passed: contract/renderer tests, measurement-script parsing, renderer export, icon validation/staging, locked Tauri build, host smoke test, portable packaging and artifact upload. PR #16 is still open and unmerged; a green hosted build is not architecture approval or clean-machine acceptance. Fresh-user Windows x64/WebView2 validation, preview/export parity, DPI, keyboard/focus, Unicode/RTL, accessibility and performance evidence remain outstanding.
+- **Phase 0 package verification / PR #23:** earlier hosted fixture run [#41925110491](https://github.com/PanDuroDev/LaunchForge/actions/runs/41925110491) passed, but the latest PR-head workflow [#41926599380](https://github.com/PanDuroDev/LaunchForge/actions/runs/41926599380) failed in its verifier-test step. The PR is open; review findings remain to be resolved. The fresh-user clean-VM procedure has not been accepted as passed evidence.
+- **Phase 1 / PR #22:** a draft P1-A project-foundation implementation exists against the Phase 0 candidate, but its Rust test suite was not run. The Phase 0 workflow triggered on that branch is not a P1-A test. Contract approval and a tested Studio/Runtime integration path remain open.
+- **Phase 3 / PR #21:** Stage 3.1 is merged. It provides a bounded HTTPS JSON GET adapter, typed JSON Pointer mapping and fixture tests. It explicitly does not provide DNS/IP egress enforcement, a visual Connection Builder, secure Runtime credential storage, data-state/action integration or preview/Runtime parity.
+- **Phase 4:** current replacement PR #25 remains a POSIX-only transaction/lifecycle prototype without a Windows/NTFS backend or accepted native Runtime integration. Phase 4.1 work also remains a prototype.
+- **Phase 5:** PR #14 publisher inventory QA and PR #18 diagnostics/security documentation are merged. PR #18's whole-product security/release decision remains **FAIL / NO-GO**. PR #15 remains a TUF trust/recovery proposal, not an integrated updater.
+
+All product-level conformance cases remain blocked until the upstream contracts, implementation interfaces, fixtures and target environments are accepted. Do not use the successful Phase 0 hosted build or Phase 3.1 isolated tests to waive the other gates.
+
+**Phase decision:** continue Phase 6.1 compatibility/conformance preparation only. Do not select a 6.2 expansion or claim 6.3 support until the full dependency gate, user-demand evidence and named maintenance ownership are accepted.
