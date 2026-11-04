@@ -1,3 +1,5 @@
+"""Behavioral tests for the isolated Phase 2.1 layout prototype."""
+
 import unittest
 
 from launchforge_layout import (
@@ -16,7 +18,10 @@ from launchforge_layout import (
 
 
 class StackLayoutTests(unittest.TestCase):
+    """Regression tests for stack sizing, alignment, direction, and overflow."""
+
     def test_vertical_stack_applies_padding_gap_and_fill_cross_axis(self):
+        """Verify vertical placement applies padding, gaps, and cross-axis fill."""
         result = layout_stack(
             Rect(0, 0, 300, 200),
             [
@@ -33,6 +38,7 @@ class StackLayoutTests(unittest.TestCase):
         self.assertFalse(result.overflow_y)
 
     def test_fill_weights_distribute_remaining_main_axis_space(self):
+        """Verify fill children receive remaining space in proportion to their weights."""
         result = layout_stack(
             Rect(0, 0, 320, 100),
             [
@@ -53,6 +59,7 @@ class StackLayoutTests(unittest.TestCase):
         self.assertAlmostEqual(result.by_key("secondary").width, 128)
 
     def test_mixed_fill_minimum_and_maximum_redistribute_correctly(self):
+        """Verify mixed minimum and maximum bounds redistribute space without false overflow."""
         result = layout_stack(
             Rect(0, 0, 100, 40),
             [
@@ -68,6 +75,7 @@ class StackLayoutTests(unittest.TestCase):
         self.assertFalse(result.overflow_x)
 
     def test_fill_maximum_releases_space_to_other_fill_children(self):
+        """Verify a capped fill child releases unused space to its siblings."""
         result = layout_stack(
             Rect(0, 0, 300, 50),
             [
@@ -80,6 +88,7 @@ class StackLayoutTests(unittest.TestCase):
         self.assertEqual(result.by_key("remaining").width, 220)
 
     def test_minimum_fill_constraints_report_overflow(self):
+        """Verify unsatisfied minimum sizes are preserved and reported as overflow."""
         result = layout_stack(
             Rect(0, 0, 100, 40),
             [
@@ -93,6 +102,7 @@ class StackLayoutTests(unittest.TestCase):
         self.assertTrue(result.overflow_x)
 
     def test_center_and_end_distribution_position_fixed_children(self):
+        """Verify center and end distribution position fixed children correctly."""
         children = [
             LayoutChild("a", AxisSpec.fixed(50), AxisSpec.fixed(20)),
             LayoutChild("b", AxisSpec.fixed(50), AxisSpec.fixed(20)),
@@ -109,6 +119,7 @@ class StackLayoutTests(unittest.TestCase):
         self.assertEqual(ended.by_key("a").x, 190)
 
     def test_space_between_distributes_only_remaining_space(self):
+        """Verify space-between adds only the unused space between children."""
         result = layout_stack(
             Rect(0, 0, 300, 40),
             [
@@ -125,6 +136,7 @@ class StackLayoutTests(unittest.TestCase):
         self.assertEqual(result.by_key("c").x, 250)
 
     def test_horizontal_rtl_keeps_logical_order_and_starts_at_right(self):
+        """Verify RTL keeps logical child order while placing the first child on the right."""
         result = layout_stack(
             Rect(0, 0, 300, 40),
             [
@@ -139,6 +151,7 @@ class StackLayoutTests(unittest.TestCase):
         self.assertEqual(result.by_key("second").x, 190)
 
     def test_vertical_stack_cross_start_respects_rtl(self):
+        """Verify vertical-stack cross-axis start follows RTL direction."""
         result = layout_stack(
             Rect(0, 0, 200, 100),
             [LayoutChild("child", AxisSpec.fixed(50), AxisSpec.fixed(20))],
@@ -149,6 +162,7 @@ class StackLayoutTests(unittest.TestCase):
         self.assertEqual(result.by_key("child").x, 150)
 
     def test_fit_content_uses_intrinsic_size_and_constraints(self):
+        """Verify fit sizing uses intrinsic dimensions and applies size constraints."""
         result = layout_stack(
             Rect(0, 0, 300, 100),
             [LayoutChild("label", AxisSpec.fit(maximum=90), AxisSpec.fit(minimum=24), 120, 18)],
@@ -157,6 +171,7 @@ class StackLayoutTests(unittest.TestCase):
         self.assertEqual(result.by_key("label"), Rect(0, 0, 90, 24))
 
     def test_overflow_is_reported_for_fixed_children_that_do_not_fit(self):
+        """Verify fixed children exceeding the main axis trigger overflow."""
         result = layout_stack(
             Rect(0, 0, 150, 40),
             [
@@ -170,6 +185,7 @@ class StackLayoutTests(unittest.TestCase):
         self.assertEqual(result.by_key("b").x, 108)
 
     def test_fill_layout_adapts_to_documented_desktop_viewports(self):
+        """Verify a fill layout adapts across the documented desktop viewport sizes."""
         for width, height in ((960, 600), (1280, 720), (1600, 900)):
             with self.subTest(viewport=(width, height)):
                 result = layout_stack(
@@ -193,6 +209,7 @@ class StackLayoutTests(unittest.TestCase):
                 self.assertFalse(result.overflow_y)
 
     def test_layout_is_deterministic_for_identical_logical_inputs(self):
+        """Verify identical logical inputs produce identical layout results."""
         args = (
             Rect(3, 7, 333, 211),
             [
@@ -205,17 +222,20 @@ class StackLayoutTests(unittest.TestCase):
         self.assertEqual(first, second)
 
     def test_duplicate_child_keys_are_rejected(self):
+        """Verify duplicate child keys are rejected."""
         child = LayoutChild("same", AxisSpec.fill(), AxisSpec.fill())
         with self.assertRaisesRegex(ValueError, "unique"):
             layout_stack(Rect(0, 0, 10, 10), [child, child], axis=Axis.HORIZONTAL)
 
     def test_negative_gap_is_rejected(self):
+        """Verify negative stack gaps are rejected."""
         with self.assertRaisesRegex(ValueError, "gap"):
             layout_stack(
                 Rect(0, 0, 10, 10), [], axis=Axis.HORIZONTAL, gap=-1
             )
 
     def test_capped_fill_child_honors_center_and_end_cross_alignment(self):
+        """Verify capped cross-axis fill honors center and end alignment."""
         for alignment, expected_y in (
             (Alignment.CENTER, 35),
             (Alignment.END, 70),
@@ -235,6 +255,7 @@ class StackLayoutTests(unittest.TestCase):
                 self.assertEqual(result.by_key("child").y, expected_y)
 
     def test_stretch_respects_cross_axis_maximum(self):
+        """Verify stretch alignment respects the cross-axis maximum."""
         result = layout_stack(
             Rect(0, 0, 200, 100),
             [LayoutChild("child", AxisSpec.fixed(40), AxisSpec.fill(maximum=30))],
@@ -244,6 +265,7 @@ class StackLayoutTests(unittest.TestCase):
         self.assertEqual(result.by_key("child").height, 30)
 
     def test_cross_axis_overflow_is_reported_on_only_the_cross_axis(self):
+        """Verify cross-axis overflow does not set the main-axis overflow flag."""
         result = layout_stack(
             Rect(0, 0, 100, 30),
             [LayoutChild("child", AxisSpec.fixed(20), AxisSpec.fixed(50))],
@@ -253,6 +275,7 @@ class StackLayoutTests(unittest.TestCase):
         self.assertTrue(result.overflow_y)
 
     def test_invalid_size_constraints_are_rejected(self):
+        """Verify invalid min/max bounds and non-positive fill weights are rejected."""
         with self.assertRaisesRegex(ValueError, "maximum"):
             AxisSpec.fixed(10, minimum=20, maximum=15)
         with self.assertRaisesRegex(ValueError, "weight"):
@@ -260,7 +283,10 @@ class StackLayoutTests(unittest.TestCase):
 
 
 class OverlayLayoutTests(unittest.TestCase):
+    """Regression tests for overlay sizing, placement, and overflow."""
+
     def test_overlay_center_and_directional_edges(self):
+        """Verify overlay centering and directional edge alignment."""
         result = layout_overlay(
             Rect(0, 0, 200, 100),
             [
@@ -276,6 +302,7 @@ class OverlayLayoutTests(unittest.TestCase):
         self.assertEqual(result.by_key("badge"), Rect(170, 90, 30, 10))
 
     def test_overlay_fill_covers_inner_bounds_and_padding(self):
+        """Verify overlay fill covers the padded content bounds."""
         result = layout_overlay(
             Rect(0, 0, 100, 80),
             [OverlayChild("background", AxisSpec.fill(), AxisSpec.fill())],
@@ -284,6 +311,7 @@ class OverlayLayoutTests(unittest.TestCase):
         self.assertEqual(result.by_key("background"), Rect(20, 5, 70, 60))
 
     def test_overlay_reports_overflow(self):
+        """Verify overlay children outside the content bounds trigger overflow."""
         result = layout_overlay(
             Rect(0, 0, 40, 40),
             [OverlayChild("large", AxisSpec.fixed(60), AxisSpec.fixed(60))],
