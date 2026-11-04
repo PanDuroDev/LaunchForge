@@ -212,17 +212,21 @@ export function mapFields<T extends Record<string, JsonValue> = Record<string, J
       throw new MappingError(m.field, "invalid_mapping", "Invalid or duplicate output field or source path");
     }
     seen.add(m.field);
-    if (m.transforms !== undefined && (!Array.isArray(m.transforms) || m.transforms.length > 8 ||
-        m.transforms.some(step => !["trim", "lowercase", "uppercase", "toNumber", "toBoolean", "toUrl"].includes(step)))) {
+    const rawTransforms: unknown = m.transforms;
+    if (rawTransforms !== undefined && (!Array.isArray(rawTransforms) || rawTransforms.length > 8 ||
+        rawTransforms.some((step: unknown) => typeof step !== "string" ||
+          !["trim", "lowercase", "uppercase", "toNumber", "toBoolean", "toUrl"].includes(step)))) {
       throw new MappingError(m.field, "invalid_mapping", "The mapping contains an unsupported transformation");
     }
-    let value = atPointer(input, m.source, m.field);
-    if (value === undefined) {
+    const steps = (rawTransforms ?? []) as Transform[];
+    const selected = atPointer(input, m.source, m.field);
+    let value: JsonValue;
+    if (selected === undefined) {
       if (m.defaultValue !== undefined) { validateJson(m.defaultValue); value = m.defaultValue; }
       else if (m.optional) continue;
       else throw new MappingError(m.field, "missing_value", "Required source value is missing");
-    }
-    for (const step of m.transforms ?? []) value = transform(value, step, m.field);
+    } else value = selected;
+    for (const step of steps) value = transform(value, step, m.field);
     if (!typeMatches(value, m.type)) throw new MappingError(m.field, "type_mismatch", "Mapped value does not match declared type");
     output[m.field] = value;
   }
