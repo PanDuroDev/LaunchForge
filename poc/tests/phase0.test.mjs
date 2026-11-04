@@ -83,7 +83,7 @@ test("UUIDv4 identifiers are lowercase and unique across project entities", () =
   expectCode(() => validateProject(invalid), "DUPLICATE_ID");
 
   const uppercase = structuredClone(fixture);
-  uppercase.projectId = uppercase.projectId.toUpperCase();
+  uppercase.projectId = "ABCDEFAB-CDEF-4ABC-8DEF-ABCDEFABCDEF";
   expectCode(() => validateProject(uppercase), "INVALID_ID");
 });
 
