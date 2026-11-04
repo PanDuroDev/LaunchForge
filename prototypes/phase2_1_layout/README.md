@@ -28,7 +28,7 @@ No third-party packages are required. Python 3.10 or later is required.
 
 ## Contract boundary
 
-The module accepts typed in-memory inputs and returns logical rectangles. It does not serialize project nodes, select a renderer, define component IDs, persist assets, or call Studio/Runtime APIs. Its types and allocation rules are proposal-level behavior and must be compared with the accepted Phase 0/1 renderer and schema contracts before production integration. Do not copy these Python types into the project schema as-is.
+The module accepts typed in-memory inputs and returns logical rectangles and hit targets. It does not serialize project nodes, select a renderer, define component IDs, persist assets, or call Studio/Runtime APIs. Its types and allocation rules are proposal-level behavior and must be compared with the accepted Phase 0/1 renderer and schema contracts before production integration. Do not copy these Python types into the project schema as-is.
 
 The current proposed fill rule distributes remaining main-axis space by weight after fixed/fit children and base gaps are accounted for. When a fill child's min/max constraint is reached, that child is frozen at the bound and the remaining space is redistributed. If minimum constraints exceed available space, the minimums are preserved and overflow is reported.
 
