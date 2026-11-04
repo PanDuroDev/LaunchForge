@@ -33,6 +33,7 @@ Consequences:
 - Keep assets outside the main project document, addressed by stable project-owned references.
 - No arbitrary scripts, marketplace, cloud collaboration, timeline editor, custom shaders, or extra production renderer.
 - Every imported project/archive is untrusted input.
+- Archive extraction must have explicit resource bounds; concrete numeric limits are selected with the approved archive format/library before implementation.
 - Shared-contract changes require an explicit proposal, compatibility impact, migration note, and integration-owner approval.
 
 ## 2. Phase 2 delivery model
@@ -71,7 +72,7 @@ The initial authoring surface should expose only the following primitives:
 | **Container** | Parent/visual region for child components | Padding, background/border styling through the style system, child clipping/overflow policy, and a layout direction |
 | **Vertical stack** | Place children top-to-bottom | Gap, padding, main-axis distribution, cross-axis alignment |
 | **Horizontal stack** | Place children left-to-right (or direction-aware in RTL) | Gap, padding, main-axis distribution, cross-axis alignment |
-| **Overlay** | Place a small number of intentionally overlapping children | Explicit stacking order and deterministic bounds; use only where a launcher UI needs overlays such as a badge over artwork |
+| **Overlay** | Place a small number of intentionally overlapping children | Explicit stacking order and deterministic bounds; later children render above earlier siblings; use only where a launcher UI needs overlays such as a badge over artwork |
 
 Do not add a freeform grid, constraint graph, arbitrary anchors, or a design-tool canvas in this stage. Revisit those only when real launcher tasks demonstrate a need.
 
@@ -81,7 +82,7 @@ The inspector should describe sizing in user terms and map it to renderer-neutra
 
 - **Fixed:** use an explicit logical size.
 - **Fit content:** size to the component's intrinsic content, subject to minimum/maximum constraints.
-- **Fill available:** consume the space remaining after fixed/fit children and the stack's base gaps are accounted for. Each fill child has a finite, positive weight; the default weight is **1**. Distribute remaining space in proportion to the active children’s weights.
+- **Fill available:** begin with the stack's inner main-axis extent after subtracting its leading and trailing padding. Then subtract resolved fixed/fit child sizes and the stack's base gaps. Each fill child has a finite, positive weight; the default weight is **1**. Allocate the remaining space by the active children’s weights.
 - **Minimum/maximum:** clamp the proposed fill allocation to the child's minimum and maximum. Resolve constraints iteratively: calculate the aggregate violation across all minimum and maximum violators; when it is positive, freeze only minimum violators, when negative freeze only maximum violators, and when zero freeze all violators. Redistribute the remaining space among children that are not frozen.
 - If the combined minimums exceed the available main-axis space, preserve the minimums and report overflow rather than silently shrinking below a minimum. If maximums leave unused space, pass the remainder to the stack's main-axis distribution rule.
 - Invalid, non-finite, zero, or negative fill weights are rejected. A minimum greater than its maximum is rejected. Fixed and fit-content sizes are resolved and clamped before fill allocation.
@@ -98,7 +99,8 @@ Expose a limited, consistent vocabulary:
 - Main-axis distribution: start, center, end, and space-between.
 - Cross-axis alignment: start, center, end, and stretch where the child supports it.
 - Explicit text alignment for text components.
-- Child order is the stable **logical** order used by the hierarchy, serialization, keyboard/accessibility reading order, and component identity. RTL changes visual placement, not logical order: for logical children `A, B` in a horizontal RTL stack, `A` remains first in logical and accessibility order but is placed on the right, while `B` is placed to its left. Hit testing follows the visible geometry and returns the same stable child identity; it must not rewrite reading order.
+- Child order is the stable **logical** order used by the hierarchy, serialization, keyboard/accessibility reading order, and component identity. RTL changes visual placement, not logical order: for logical children `A, B` in a horizontal RTL stack, `A` remains first in logical and accessibility order but is placed on the right, while `B` is placed to its left. Hit testing follows visible geometry and returns the same stable child identity; it must not rewrite reading order.
+- Overlay stacking and hit testing use the same declared child order: later siblings render above earlier siblings. At an overlap, the visually topmost interactive child receives the hit. A non-interactive overlay child is hit-test transparent, so hit testing continues to the next lower interactive child. Preview and exported Runtime must return the same target identity.
 - Overflow behavior: visible, clip, or scroll only where the component/runtime supports it.
 
 Do not use the same label for different meanings. For example, container alignment and text alignment must remain distinct in the inspector.
@@ -130,9 +132,11 @@ The integration owner must confirm the supported Windows baseline and actual pre
 ### 3.6 Layout test requirements
 
 - Golden geometry tests for each primitive, sizing mode, axis, alignment, and supported nesting case.
+- Padded horizontal-stack fixture: for an outer width of 320 logical units, 16 units of left/right padding, an 80-unit fixed child, two fill children weighted 1:2, and 8-unit base gaps, the fill children receive 64 and 128 units and end at the inner right edge (304). This proves padding is removed before fill allocation.
 - Repeat-layout tests proving deterministic results with the same inputs.
 - Constraint tests for min/max, zero/negative values, overflow, and insufficient parent space.
 - Preview/export parity tests using identical fixtures.
+- Overlay hit-test fixture: place two interactive children in overlapping bounds and verify the visually topmost child receives the hit. Repeat with the top child non-interactive and verify the hit passes through to the lower interactive child. Preview and export must return the same target and stable identity mapping.
 - DPI tests that verify logical layout remains stable while physical rendering scales.
 - RTL tests for direction-aware horizontal flow, without mirroring non-directional content.
 - Regression fixtures for existing Phase 1 projects with no new layout properties.
@@ -184,6 +188,8 @@ Required behavior:
 - Support safe rename/move operations that update references transactionally.
 - Preserve required assets through project duplication, archive/export, import, and build/export.
 - Never allow an imported archive path to escape the destination root (including traversal paths and symlink/reparse-point cases).
+- Bound archive extraction by compressed package size, total uncompressed size, per-entry uncompressed size, entry count, compression ratio, archive nesting depth, path-component depth, and elapsed extraction time. Select and record concrete limits when the archive format/library is approved; do not leave a limit unbounded or rely only on archive metadata.
+- Enforce limits while streaming extraction using actual byte and entry counters. When a limit is exceeded, cancel extraction, remove staged output, release temporary resources, and leave the destination project and its references unchanged.
 - Canonicalize the destination root and each target path. Verify that each target remains inside the canonical destination immediately before every write; do not rely only on an earlier validation pass.
 - Reject symlink, junction, and reparse-point archive entries, or handle them without following a link outside the destination root. Do not follow archive-provided links during extraction.
 - Keep binary data out of the main project document.
@@ -252,10 +258,11 @@ A user who is not editing project JSON should be able to:
 6. Apply a theme preset, change a shared token, and override one component without changing the whole theme.
 7. Duplicate a project and confirm the source project remains unchanged.
 8. Export a project, import it into a clean workspace, and confirm its appearance and asset references are preserved.
-9. Export/import a legacy fixture containing unsupported fields; compare its semantic data before and after the round trip and allow changes only through an explicit migration.
-10. Attempt imports with a malformed package, a missing asset, a schema-version mismatch, and an existing destination project. Verify validation finishes before any replacement; each rejected import leaves the destination project and all its references unchanged.
-11. Import an adversarial archive containing traversal paths and symlink/junction/reparse-point entries. Verify the entries are rejected or handled without following links outside the canonical destination root.
-12. Open a Phase 1 MVP fixture and verify that it displays without an automatic destructive migration.
+9. Exercise normal open/save, project duplication, node duplication, cross-project asset reuse/copy, and successful export/import. Assert project, node, and asset identity plus reference remapping against the approved Phase 1 identity/asset-reference contracts. Verify that project duplication uses the approved new project identity, node duplication uses approved new node IDs and internal-reference remapping, and asset reuse/copy follows the approved cross-project policy. Add these assertions only after those Phase 1 contracts are approved; do not define a competing identity policy here.
+10. Export/import a legacy fixture containing unsupported fields; compare its semantic data before and after the round trip and allow changes only through an explicit migration.
+11. Attempt imports with a malformed package, a missing asset, a schema-version mismatch, and an existing destination project. Verify validation finishes before any replacement; each rejected import leaves the destination project and all its references unchanged.
+12. Import adversarial and oversized archives containing traversal paths, symlink/junction/reparse-point entries, excessive compressed or uncompressed size, an oversized entry, too many entries, excessive archive/path nesting, or an extraction timeout. Verify limits are enforced during extraction, cancellation and staging cleanup occur, no link is followed outside the canonical destination root, and the destination project and references remain unchanged.
+13. Open a Phase 1 MVP fixture and verify that it displays without an automatic destructive migration.
 
 ## 5. Stage 2.3 — Accessibility, localization, and beta validation
 
@@ -383,8 +390,10 @@ Wait for the integration owner to approve the proposal. Do not add a second comp
 - [ ] Theme token updates and component overrides behave predictably.
 - [ ] All three starter templates are editable without project-file edits.
 - [ ] Project duplicate/archive/import/export workflows are recoverable and preserve required assets.
+- [ ] Identity and reference-remapping tests cover normal open/save, project and node duplication, cross-project asset reuse/copy, and successful export/import using only the approved Phase 1 identity and asset-reference contracts.
 - [ ] Malformed-package, missing-asset, schema-mismatch, and existing-destination import failures are tested; validation occurs before replacement and rejected imports leave destination data and references unchanged.
 - [ ] Adversarial archive fixtures with traversal and symlink/junction/reparse-point entries are rejected or handled without following links outside the canonical destination root; containment is checked immediately before every write.
+- [ ] Archive imports enforce approved compressed/uncompressed size, per-entry size, entry-count, compression-ratio, nesting-depth, and extraction-time bounds, cancel and clean staged output on limit violations, and leave the destination unchanged.
 - [ ] Legacy fixtures containing unsupported fields preserve semantic data through project export/import unless an explicit, versioned migration is applied.
 - [ ] Compatibility view explains project/schema/runtime support and migration requirements.
 
