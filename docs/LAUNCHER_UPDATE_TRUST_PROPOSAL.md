@@ -6,15 +6,15 @@
 
 ## 1. Decision summary
 
-Use **The Update Framework (TUF), specification v1.0.37**, as the protocol baseline for launcher application update metadata. Prefer a maintained, specification-conformant implementation in the language selected by Phase 0 over a custom signature envelope or a hand-written partial TUF client.
+Use **The Update Framework (TUF), specification v1.0.36**, as the protocol baseline for launcher application update metadata. Prefer a maintained, specification-conformant implementation in the language selected by Phase 0 over a custom signature envelope or a hand-written partial TUF client.
 
-TUF defines four required top-level metadata roles — Root, Targets, Snapshot and Timestamp — plus optional delegated Targets roles. Different roles use different keys and responsibilities; metadata has version and expiry; Targets binds artifact hashes and sizes; Snapshot binds the metadata set; Timestamp helps detect stale repository views. See the official [TUF specification](https://github.com/theupdateframework/specification/blob/master/tuf-spec.md) and [roles overview](https://theupdateframework.org/docs/metadata/).
+TUF defines four required top-level metadata roles — Root, Targets, Snapshot and Timestamp — plus optional delegated Targets roles. Different roles use different keys and responsibilities; metadata has version and expiry; Targets binds artifact hashes and sizes; Snapshot binds the metadata set; Timestamp helps detect stale repository views. See the official [TUF specification](https://theupdateframework.github.io/specification/v1.0.36/) and [roles overview](https://theupdateframework.org/docs/metadata/).
 
 TUF secures acquisition and verification of target bytes. It does **not** choose a package format, bootstrap trust for an arbitrary first install, apply the update, or guarantee application recovery. LaunchForge must provide those application-specific layers separately.
 
 ### Decisions proposed for architecture-owner approval
 
-1. Adopt TUF v1.0.37 semantics and a conformant library; do not create a LaunchForge-specific signature format.
+1. Adopt TUF v1.0.36 semantics and a conformant library; do not create a LaunchForge-specific signature format.
 2. Give each launcher product and release channel a separately provisioned repository identity/trusted root. Channel changes require explicit publisher/user policy and are never an implicit fallback.
 3. Bootstrap the initial TUF root out-of-band in the publisher-authenticated installer/package. The manifest/repository must never be allowed to introduce its own first trust anchor.
 4. Keep Root, Targets and Snapshot signing keys offline and protected; use a separate narrowly scoped online Timestamp key. Select threshold sizes only after the publisher's key custody/availability model is known.
