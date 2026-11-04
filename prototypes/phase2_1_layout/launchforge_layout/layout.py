@@ -492,6 +492,7 @@ def layout_overlay(
         items.append(PlacedItem(child.key, Rect(x, y, width, height)))
     return LayoutResult(tuple(items), overflow_x, overflow_y)
 
+
 def hit_test(
     result: LayoutResult,
     x: float,
