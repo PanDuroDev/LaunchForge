@@ -1,0 +1,789 @@
+{
+  "catalog_version": 1,
+  "catalog_status": "planning",
+  "protocol": "docs/phase6/CONFORMANCE_PLAN.md",
+  "contract_dependency_note": "Registry IDs are canonical planning labels only. They identify prerequisite areas and do not constitute approved APIs, schemas, or evidence that a contract exists.",
+  "cases": [
+    {
+      "test_id": "LF-COMPAT-001",
+      "category": "project-format",
+      "title": "Open a supported project",
+      "scenario": "Open a valid fixture whose project-format version is declared supported by the selected Studio or Runtime.",
+      "expected_behavior": "Opening succeeds and reports the exact project/product compatibility tuple.",
+      "product_surfaces": [
+        "studio",
+        "exported_launcher"
+      ],
+      "contract_dependencies": [
+        "phase0:project-format",
+        "phase1:project-persistence"
+      ],
+      "evidence_required": [
+        "result summary",
+        "diagnostics",
+        "tool and fixture versions"
+      ],
+      "mandatory": true,
+      "lifecycle": "planned"
+    },
+    {
+      "test_id": "LF-COMPAT-002",
+      "category": "project-format",
+      "title": "Reject malformed projects",
+      "scenario": "Open malformed input or a project missing a contract-required field.",
+      "expected_behavior": "Fail closed with an actionable diagnostic; the source project is not overwritten.",
+      "product_surfaces": [
+        "studio",
+        "exported_launcher"
+      ],
+      "contract_dependencies": [
+        "phase0:project-format",
+        "phase1:project-validation"
+      ],
+      "evidence_required": [
+        "diagnostic ID",
+        "source preservation evidence"
+      ],
+      "mandatory": true,
+      "lifecycle": "planned"
+    },
+    {
+      "test_id": "LF-COMPAT-003",
+      "category": "project-format",
+      "title": "Reject unknown major versions",
+      "scenario": "Open a project with an unknown project-format major version.",
+      "expected_behavior": "Do not guess, coerce, or discard fields; report unsupported format/version.",
+      "product_surfaces": [
+        "studio",
+        "exported_launcher"
+      ],
+      "contract_dependencies": [
+        "phase0:project-format",
+        "phase1:project-validation"
+      ],
+      "evidence_required": [
+        "diagnostic ID",
+        "reported source and target versions"
+      ],
+      "mandatory": true,
+      "lifecycle": "planned"
+    },
+    {
+      "test_id": "LF-COMPAT-004",
+      "category": "project-format",
+      "title": "Round-trip supported projects",
+      "scenario": "Save and reopen each supported fixture without semantic edits.",
+      "expected_behavior": "Stable IDs, references, properties, and required data retain contract-defined meaning.",
+      "product_surfaces": [
+        "studio"
+      ],
+      "contract_dependencies": [
+        "phase0:project-format",
+        "phase1:project-persistence"
+      ],
+      "evidence_required": [
+        "semantic comparison report",
+        "fixture revision"
+      ],
+      "mandatory": true,
+      "lifecycle": "planned"
+    },
+    {
+      "test_id": "LF-COMPAT-005",
+      "category": "project-format",
+      "title": "Preserve unsupported optional features",
+      "scenario": "Open a project containing an unsupported optional feature.",
+      "expected_behavior": "Apply the approved preservation/diagnostic policy; never silently remove data.",
+      "product_surfaces": [
+        "studio",
+        "exported_launcher"
+      ],
+      "contract_dependencies": [
+        "phase0:project-format",
+        "phase1:project-validation"
+      ],
+      "evidence_required": [
+        "diagnostic report",
+        "before/after semantic diff"
+      ],
+      "mandatory": true,
+      "lifecycle": "planned"
+    },
+    {
+      "test_id": "LF-COMPAT-006",
+      "category": "project-format",
+      "title": "Block unknown required capabilities",
+      "scenario": "Validate a project that requires a capability unknown to the selected target.",
+      "expected_behavior": "Block build/export and identify the unsupported requirement.",
+      "product_surfaces": [
+        "studio"
+      ],
+      "contract_dependencies": [
+        "phase0:capability-contract",
+        "phase1:build-validation"
+      ],
+      "evidence_required": [
+        "capability report",
+        "build-block evidence"
+      ],
+      "mandatory": true,
+      "lifecycle": "planned"
+    },
+    {
+      "test_id": "LF-MIG-001",
+      "category": "migration",
+      "title": "Migrate every supported source version",
+      "scenario": "Migrate fixtures from every declared source format version to the selected target version.",
+      "expected_behavior": "An approved deterministic migration path exists and output validates against the target format.",
+      "product_surfaces": [
+        "studio"
+      ],
+      "contract_dependencies": [
+        "phase0:migration-policy",
+        "phase1:project-format"
+      ],
+      "evidence_required": [
+        "migration path",
+        "target validation report"
+      ],
+      "mandatory": true,
+      "lifecycle": "planned"
+    },
+    {
+      "test_id": "LF-MIG-002",
+      "category": "migration",
+      "title": "Preserve project semantics during migration",
+      "scenario": "Migrate a fixture containing assets, stable IDs, bindings, actions, and optional fields.",
+      "expected_behavior": "Supported semantic values/references remain correct; unsupported values receive explicit diagnostics.",
+      "product_surfaces": [
+        "studio"
+      ],
+      "contract_dependencies": [
+        "phase0:migration-policy",
+        "phase1:project-format",
+        "phase2:asset-contract",
+        "phase3:data-action-contract"
+      ],
+      "evidence_required": [
+        "semantic diff",
+        "migration diagnostics"
+      ],
+      "mandatory": true,
+      "lifecycle": "planned"
+    },
+    {
+      "test_id": "LF-MIG-003",
+      "category": "migration",
+      "title": "Preserve source after migration failure",
+      "scenario": "Force a migration failure after an intermediate transformation.",
+      "expected_behavior": "Original source remains recoverable and no partial output is reported as successful.",
+      "product_surfaces": [
+        "studio"
+      ],
+      "contract_dependencies": [
+        "phase0:migration-failure-policy",
+        "phase1:project-persistence"
+      ],
+      "evidence_required": [
+        "source checksum before/after",
+        "failure diagnostic"
+      ],
+      "mandatory": true,
+      "lifecycle": "planned"
+    },
+    {
+      "test_id": "LF-MIG-004",
+      "category": "migration",
+      "title": "Make current-format migration a no-op",
+      "scenario": "Run migration assessment on an already-current project.",
+      "expected_behavior": "No repeated destructive transformation occurs; tool reports migration is unnecessary.",
+      "product_surfaces": [
+        "studio"
+      ],
+      "contract_dependencies": [
+        "phase0:migration-policy",
+        "phase1:project-format"
+      ],
+      "evidence_required": [
+        "before/after semantic comparison",
+        "migration result"
+      ],
+      "mandatory": true,
+      "lifecycle": "planned"
+    },
+    {
+      "test_id": "LF-MIG-005",
+      "category": "migration",
+      "title": "Reject missing migration paths",
+      "scenario": "Attempt migration from a source version with no approved path.",
+      "expected_behavior": "Stop with source preserved and identify the unsupported version/path.",
+      "product_surfaces": [
+        "studio"
+      ],
+      "contract_dependencies": [
+        "phase0:migration-policy"
+      ],
+      "evidence_required": [
+        "source preservation evidence",
+        "diagnostic ID"
+      ],
+      "mandatory": true,
+      "lifecycle": "planned"
+    },
+    {
+      "test_id": "LF-MIG-006",
+      "category": "migration",
+      "title": "Diagnose invalid references during migration",
+      "scenario": "Migrate a project with missing or invalid asset references.",
+      "expected_behavior": "Preserve source data and report each invalid reference under the approved migration policy.",
+      "product_surfaces": [
+        "studio"
+      ],
+      "contract_dependencies": [
+        "phase0:migration-policy",
+        "phase1:asset-reference-contract",
+        "phase2:asset-contract"
+      ],
+      "evidence_required": [
+        "reference diagnostics",
+        "source preservation evidence"
+      ],
+      "mandatory": true,
+      "lifecycle": "planned"
+    },
+    {
+      "test_id": "LF-CAP-001",
+      "category": "capability",
+      "title": "Compare project requirements to target capabilities",
+      "scenario": "Compare a project's required capability set with the selected renderer's declared capabilities.",
+      "expected_behavior": "Produce a deterministic supported/unsupported report.",
+      "product_surfaces": [
+        "studio"
+      ],
+      "contract_dependencies": [
+        "phase0:capability-contract",
+        "phase1:renderer-contract"
+      ],
+      "evidence_required": [
+        "capability comparison report"
+      ],
+      "mandatory": true,
+      "lifecycle": "planned"
+    },
+    {
+      "test_id": "LF-CAP-002",
+      "category": "capability",
+      "title": "Block absent required capabilities",
+      "scenario": "Select a target missing a required component or capability.",
+      "expected_behavior": "Block build/export before packaging and identify the exact requirement.",
+      "product_surfaces": [
+        "studio"
+      ],
+      "contract_dependencies": [
+        "phase0:capability-contract",
+        "phase1:build-validation"
+      ],
+      "evidence_required": [
+        "build-block evidence",
+        "diagnostic ID"
+      ],
+      "mandatory": true,
+      "lifecycle": "planned"
+    },
+    {
+      "test_id": "LF-CAP-003",
+      "category": "capability",
+      "title": "Fail closed on unknown capability versions",
+      "scenario": "Validate a project that requires an unknown capability identifier/version.",
+      "expected_behavior": "Fail closed unless the approved compatibility policy explicitly classifies it as optional.",
+      "product_surfaces": [
+        "studio",
+        "exported_launcher"
+      ],
+      "contract_dependencies": [
+        "phase0:capability-version-policy",
+        "phase1:runtime-capabilities"
+      ],
+      "evidence_required": [
+        "capability/version diagnostic"
+      ],
+      "mandatory": true,
+      "lifecycle": "planned"
+    },
+    {
+      "test_id": "LF-CAP-004",
+      "category": "capability",
+      "title": "Detect capability regressions",
+      "scenario": "Compare capability declarations across two target renderer versions.",
+      "expected_behavior": "Report removed/changed capabilities and execute affected regression fixtures.",
+      "product_surfaces": [
+        "studio"
+      ],
+      "contract_dependencies": [
+        "phase0:capability-contract",
+        "phase1:renderer-contract"
+      ],
+      "evidence_required": [
+        "version-to-version capability diff",
+        "regression results"
+      ],
+      "mandatory": true,
+      "lifecycle": "planned"
+    },
+    {
+      "test_id": "LF-CAP-005",
+      "category": "capability",
+      "title": "Verify shared capability semantics",
+      "scenario": "Have two target renderers claim the same capability contract.",
+      "expected_behavior": "Both pass the shared behavior fixtures before capability is treated as portable.",
+      "product_surfaces": [
+        "studio",
+        "exported_launcher"
+      ],
+      "contract_dependencies": [
+        "phase0:capability-contract",
+        "phase1:renderer-contract"
+      ],
+      "evidence_required": [
+        "per-renderer fixture results"
+      ],
+      "mandatory": true,
+      "lifecycle": "planned"
+    },
+    {
+      "test_id": "LF-PARITY-001",
+      "category": "parity",
+      "title": "Match shared visual fixtures",
+      "scenario": "Render the same supported visual fixture in Studio preview and exported Launcher.",
+      "expected_behavior": "Geometry, visible content, states, and interactions match within approved tolerances.",
+      "product_surfaces": [
+        "studio",
+        "exported_launcher"
+      ],
+      "contract_dependencies": [
+        "phase0:renderer-parity-policy",
+        "phase1:renderer-contract",
+        "phase1:runtime-api"
+      ],
+      "evidence_required": [
+        "paired render outputs",
+        "difference report"
+      ],
+      "mandatory": true,
+      "lifecycle": "planned"
+    },
+    {
+      "test_id": "LF-PARITY-002",
+      "category": "parity",
+      "title": "Match interaction outcomes",
+      "scenario": "Exercise supported interactions/actions with deterministic test data in preview and export.",
+      "expected_behavior": "Event results and observable state changes match across preview and Runtime.",
+      "product_surfaces": [
+        "studio",
+        "exported_launcher"
+      ],
+      "contract_dependencies": [
+        "phase1:runtime-api",
+        "phase3:event-action-contract"
+      ],
+      "evidence_required": [
+        "paired event traces",
+        "expected-state comparison"
+      ],
+      "mandatory": true,
+      "lifecycle": "planned"
+    },
+    {
+      "test_id": "LF-PARITY-003",
+      "category": "parity",
+      "title": "Match failure-state behavior",
+      "scenario": "Use missing assets, offline data, malformed content, and action-failure fixtures.",
+      "expected_behavior": "Both surfaces produce contract-defined fallback states and diagnostic behavior.",
+      "product_surfaces": [
+        "studio",
+        "exported_launcher"
+      ],
+      "contract_dependencies": [
+        "phase1:runtime-api",
+        "phase2:asset-contract",
+        "phase3:data-action-contract"
+      ],
+      "evidence_required": [
+        "paired failure traces",
+        "diagnostic comparison"
+      ],
+      "mandatory": true,
+      "lifecycle": "planned"
+    },
+    {
+      "test_id": "LF-PARITY-004",
+      "category": "parity",
+      "title": "Match layout across size and DPI",
+      "scenario": "Resize the supported preview/export window sizes and DPI/scaling configurations.",
+      "expected_behavior": "Both surfaces follow the approved layout and scaling rules.",
+      "product_surfaces": [
+        "studio",
+        "exported_launcher"
+      ],
+      "contract_dependencies": [
+        "phase1:renderer-contract",
+        "phase2:layout-contract"
+      ],
+      "evidence_required": [
+        "geometry report by viewport",
+        "DPI configuration"
+      ],
+      "mandatory": true,
+      "lifecycle": "planned"
+    },
+    {
+      "test_id": "LF-PARITY-005",
+      "category": "parity",
+      "title": "Match accessibility and localization behavior",
+      "scenario": "Run keyboard, focus, Unicode, and supported RTL fixtures across preview and export.",
+      "expected_behavior": "Both surfaces meet the accessibility/localization contract for the declared feature set.",
+      "product_surfaces": [
+        "studio",
+        "exported_launcher"
+      ],
+      "contract_dependencies": [
+        "phase2:accessibility-localization-contract"
+      ],
+      "evidence_required": [
+        "accessibility results",
+        "locale/RTL traces"
+      ],
+      "mandatory": true,
+      "lifecycle": "planned"
+    },
+    {
+      "test_id": "LF-SEC-001",
+      "category": "security",
+      "title": "Reject malformed or oversized imports",
+      "scenario": "Import malformed, oversized, or structurally invalid project input.",
+      "expected_behavior": "Reject safely with bounded resource use and actionable diagnostics.",
+      "product_surfaces": [
+        "studio"
+      ],
+      "contract_dependencies": [
+        "phase0:import-threat-model",
+        "phase1:project-validation"
+      ],
+      "evidence_required": [
+        "resource usage",
+        "diagnostic ID"
+      ],
+      "mandatory": true,
+      "lifecycle": "planned"
+    },
+    {
+      "test_id": "LF-SEC-002",
+      "category": "security",
+      "title": "Block asset path escape",
+      "scenario": "Import an asset reference escaping the authorized project asset root.",
+      "expected_behavior": "Reject under the approved path policy; no outside file is read or modified.",
+      "product_surfaces": [
+        "studio",
+        "exported_launcher"
+      ],
+      "contract_dependencies": [
+        "phase0:filesystem-security-policy",
+        "phase1:asset-reference-contract"
+      ],
+      "evidence_required": [
+        "filesystem access trace",
+        "negative test result"
+      ],
+      "mandatory": true,
+      "lifecycle": "planned"
+    },
+    {
+      "test_id": "LF-SEC-003",
+      "category": "security",
+      "title": "Block prohibited credentials in exports",
+      "scenario": "Scan project/export artifacts containing prohibited credentials.",
+      "expected_behavior": "Export gate blocks and reports a sanitized finding without echoing the secret.",
+      "product_surfaces": [
+        "studio"
+      ],
+      "contract_dependencies": [
+        "phase0:credential-classification",
+        "phase3:credential-export-policy"
+      ],
+      "evidence_required": [
+        "secret-scan result",
+        "redaction assertion"
+      ],
+      "mandatory": true,
+      "lifecycle": "planned"
+    },
+    {
+      "test_id": "LF-SEC-004",
+      "category": "security",
+      "title": "Deny actions outside the allowlist",
+      "scenario": "Exercise an action absent from the approved action registry/allowlist.",
+      "expected_behavior": "Deny the action; no arbitrary process, shell, or filesystem behavior occurs.",
+      "product_surfaces": [
+        "studio",
+        "exported_launcher"
+      ],
+      "contract_dependencies": [
+        "phase0:runtime-permission-model",
+        "phase1:runtime-api",
+        "phase3:event-action-contract"
+      ],
+      "evidence_required": [
+        "denial diagnostic",
+        "process/filesystem trace"
+      ],
+      "mandatory": true,
+      "lifecycle": "planned"
+    },
+    {
+      "test_id": "LF-SEC-005",
+      "category": "security",
+      "title": "Redact diagnostic output",
+      "scenario": "Generate diagnostics from a credential-bearing failure fixture.",
+      "expected_behavior": "Logs and diagnostic bundles redact secrets and private values under the approved policy.",
+      "product_surfaces": [
+        "studio",
+        "exported_launcher"
+      ],
+      "contract_dependencies": [
+        "phase0:logging-redaction-policy",
+        "phase3:credential-policy",
+        "phase5:diagnostics-policy"
+      ],
+      "evidence_required": [
+        "sanitized log scan",
+        "redaction assertions"
+      ],
+      "mandatory": true,
+      "lifecycle": "planned"
+    },
+    {
+      "test_id": "LF-PKG-001",
+      "category": "packaging",
+      "title": "Install on a clean supported environment",
+      "scenario": "Install the declared package on a clean environment matching the target baseline.",
+      "expected_behavior": "Installation succeeds with only documented prerequisites.",
+      "product_surfaces": [
+        "exported_launcher"
+      ],
+      "contract_dependencies": [
+        "phase5:package-contract",
+        "phase5:supported-os-baseline"
+      ],
+      "evidence_required": [
+        "clean-environment report",
+        "dependency inventory"
+      ],
+      "mandatory": true,
+      "lifecycle": "planned"
+    },
+    {
+      "test_id": "LF-PKG-002",
+      "category": "packaging",
+      "title": "Upgrade from supported prior releases",
+      "scenario": "Upgrade from each declared supported previous package version.",
+      "expected_behavior": "User projects/configuration are preserved under the migration and release contracts.",
+      "product_surfaces": [
+        "studio",
+        "exported_launcher"
+      ],
+      "contract_dependencies": [
+        "phase0:migration-policy",
+        "phase5:upgrade-contract"
+      ],
+      "evidence_required": [
+        "before/after project comparison",
+        "upgrade logs"
+      ],
+      "mandatory": true,
+      "lifecycle": "planned"
+    },
+    {
+      "test_id": "LF-PKG-003",
+      "category": "packaging",
+      "title": "Verify release artifact metadata",
+      "scenario": "Verify an exported artifact against its release inventory and trust policy.",
+      "expected_behavior": "Integrity/signing status is accurately reported; unsigned artifacts are not represented as trusted.",
+      "product_surfaces": [
+        "exported_launcher"
+      ],
+      "contract_dependencies": [
+        "phase5:artifact-inventory-contract",
+        "phase5:signing-trust-policy"
+      ],
+      "evidence_required": [
+        "artifact hash verification",
+        "signing status report"
+      ],
+      "mandatory": true,
+      "lifecycle": "planned"
+    },
+    {
+      "test_id": "LF-PKG-004",
+      "category": "packaging",
+      "title": "Recover from interrupted app updates",
+      "scenario": "Interrupt or fail an application update at each documented update stage.",
+      "expected_behavior": "Previous working version remains usable or documented recovery succeeds.",
+      "product_surfaces": [
+        "exported_launcher"
+      ],
+      "contract_dependencies": [
+        "phase5:updater-trust-contract",
+        "phase5:update-recovery-contract"
+      ],
+      "evidence_required": [
+        "fault-injection matrix",
+        "post-failure launch result"
+      ],
+      "mandatory": true,
+      "lifecycle": "planned"
+    },
+    {
+      "test_id": "LF-PKG-005",
+      "category": "packaging",
+      "title": "Verify uninstall and reinstall behavior",
+      "scenario": "Uninstall and reinstall the package on a supported environment.",
+      "expected_behavior": "Cleanup and user-data retention match the documented package policy.",
+      "product_surfaces": [
+        "studio",
+        "exported_launcher"
+      ],
+      "contract_dependencies": [
+        "phase5:install-uninstall-policy"
+      ],
+      "evidence_required": [
+        "filesystem diff",
+        "retained-data assertions"
+      ],
+      "mandatory": true,
+      "lifecycle": "planned"
+    },
+    {
+      "test_id": "LF-PERF-001",
+      "category": "performance",
+      "title": "Measure project open and validation",
+      "scenario": "Open and validate the agreed representative project.",
+      "expected_behavior": "Measurements are reproducible and compared with approved thresholds.",
+      "product_surfaces": [
+        "studio"
+      ],
+      "contract_dependencies": [
+        "phase0:performance-baseline",
+        "phase1:project-validation"
+      ],
+      "evidence_required": [
+        "timing/memory report",
+        "baseline comparison"
+      ],
+      "mandatory": true,
+      "lifecycle": "planned"
+    },
+    {
+      "test_id": "LF-PERF-002",
+      "category": "performance",
+      "title": "Measure preview and Runtime rendering",
+      "scenario": "Render the representative project in preview and exported Launcher.",
+      "expected_behavior": "Startup, idle resource use, memory, and render behavior are recorded for the exact target tuple.",
+      "product_surfaces": [
+        "studio",
+        "exported_launcher"
+      ],
+      "contract_dependencies": [
+        "phase0:performance-baseline",
+        "phase1:renderer-contract"
+      ],
+      "evidence_required": [
+        "paired performance report",
+        "target metadata"
+      ],
+      "mandatory": true,
+      "lifecycle": "planned"
+    },
+    {
+      "test_id": "LF-PERF-003",
+      "category": "performance",
+      "title": "Detect repeated-workflow regressions",
+      "scenario": "Run the agreed repeated authoring/launcher workflow against a retained baseline.",
+      "expected_behavior": "Regressions are detected using comparable environment and fixture identities.",
+      "product_surfaces": [
+        "studio",
+        "exported_launcher"
+      ],
+      "contract_dependencies": [
+        "phase0:performance-baseline",
+        "phase1:conformance-fixtures"
+      ],
+      "evidence_required": [
+        "run history",
+        "regression report"
+      ],
+      "mandatory": true,
+      "lifecycle": "planned"
+    },
+    {
+      "test_id": "LF-OPS-001",
+      "category": "operations",
+      "title": "Reproduce conformance from a clean checkout",
+      "scenario": "Run the complete applicable conformance set from a clean checkout/environment.",
+      "expected_behavior": "Results are reproducible and toolchain/fixture versions are recorded.",
+      "product_surfaces": [
+        "studio",
+        "exported_launcher"
+      ],
+      "contract_dependencies": [
+        "phase0:test-strategy",
+        "phase1:conformance-fixtures"
+      ],
+      "evidence_required": [
+        "CI logs",
+        "source/fixture/toolchain provenance"
+      ],
+      "mandatory": true,
+      "lifecycle": "planned"
+    }
+  ],
+  "dependency_registry": [
+    "phase0:capability-contract",
+    "phase0:capability-version-policy",
+    "phase0:credential-classification",
+    "phase0:filesystem-security-policy",
+    "phase0:import-threat-model",
+    "phase0:logging-redaction-policy",
+    "phase0:migration-failure-policy",
+    "phase0:migration-policy",
+    "phase0:performance-baseline",
+    "phase0:project-format",
+    "phase0:renderer-parity-policy",
+    "phase0:runtime-permission-model",
+    "phase0:test-strategy",
+    "phase1:asset-reference-contract",
+    "phase1:build-validation",
+    "phase1:conformance-fixtures",
+    "phase1:project-format",
+    "phase1:project-persistence",
+    "phase1:project-validation",
+    "phase1:renderer-contract",
+    "phase1:runtime-api",
+    "phase1:runtime-capabilities",
+    "phase2:accessibility-localization-contract",
+    "phase2:asset-contract",
+    "phase2:layout-contract",
+    "phase3:credential-export-policy",
+    "phase3:credential-policy",
+    "phase3:data-action-contract",
+    "phase3:event-action-contract",
+    "phase5:artifact-inventory-contract",
+    "phase5:diagnostics-policy",
+    "phase5:install-uninstall-policy",
+    "phase5:package-contract",
+    "phase5:signing-trust-policy",
+    "phase5:supported-os-baseline",
+    "phase5:update-recovery-contract",
+    "phase5:updater-trust-contract",
+    "phase5:upgrade-contract"
+  ]
+}
