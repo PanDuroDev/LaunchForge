@@ -10,6 +10,7 @@ export class ContentError extends Error {
 export class MappingError extends Error {
   constructor(readonly field: string, readonly code: string, message: string) { super(message); this.name = "MappingError"; }
 }
+/** Validate configured network limits and fill omitted values from the safe defaults. */
 function limitsOf(value: Partial<NetworkLimits> = {}): NetworkLimits {
   const v = { ...DEFAULT_LIMITS, ...value };
   if (!Number.isInteger(v.timeoutMs) || v.timeoutMs < 250 || v.timeoutMs > 60000 ||
@@ -22,6 +23,7 @@ function limitsOf(value: Partial<NetworkLimits> = {}): NetworkLimits {
   return v;
 }
 const secretQuery = /^(?:api[-_]?key|key|token|access[-_]?token|refresh[-_]?token|secret|password|signature|authorization|client[-_]?secret)$/i;
+/** Parse an endpoint and reject non-HTTPS URLs, embedded credentials, and credential query parameters. */
 export function validateHttpsEndpoint(value: string): URL {
   let url: URL;
   try { url = new URL(value); } catch { throw new ContentError("invalid_url", "The endpoint URL is invalid"); }
@@ -32,6 +34,7 @@ export function validateHttpsEndpoint(value: string): URL {
   }
   return url;
 }
+/** Validate JSON values iteratively, enforcing depth, node-count, and prototype-safety limits. */
 function validateJson(value: unknown): asserts value is JsonValue {
   const stack: Array<{ value: unknown; depth: number }> = [{ value, depth: 0 }];
   let seen = 0;
@@ -49,6 +52,7 @@ function validateJson(value: unknown): asserts value is JsonValue {
     }
   }
 }
+/** Read a response body incrementally and abort once its byte budget is exceeded. */
 async function readLimited(response: Response, max: number): Promise<Uint8Array> {
   const length = response.headers.get("content-length");
   if (length && /^\d+$/.test(length) && Number(length) > max) {
@@ -75,6 +79,7 @@ async function readLimited(response: Response, max: number): Promise<Uint8Array>
 const redirects = new Set([301, 302, 303, 307, 308]);
 const retryStatuses = new Set([408, 425, 429, 500, 502, 503, 504]);
 const secretHeader = /authorization|cookie|token|secret|password|credential|api[-_]?key/i;
+/** Wait for a bounded retry delay while respecting caller cancellation. */
 function delay(ms: number, signal?: AbortSignal): Promise<void> {
   if (signal?.aborted) return Promise.reject(new ContentError("cancelled", "Request cancelled"));
   return new Promise((resolve, reject) => {
@@ -83,7 +88,7 @@ function delay(ms: number, signal?: AbortSignal): Promise<void> {
     signal?.addEventListener("abort", abort, { once: true });
   });
 }
-/** HTTPS GET JSON adapter with bounded redirects, streamed bytes, timeout, cancellation and retries. */
+/** Fetch and validate JSON over HTTPS with bounded redirects, body bytes, timeout, cancellation, and retries. */
 export async function fetchJson(
   request: { url: string; method?: "GET"; headers?: HeadersInit; signal?: AbortSignal; limits?: Partial<NetworkLimits> },
   fetchImpl: typeof fetch = fetch
@@ -102,9 +107,11 @@ export async function fetchJson(
     const timer = setTimeout(() => { timedOut = true; controller.abort(); }, limits.timeoutMs);
     try {
       let url = new URL(initial), response: Response | undefined;
+      // Redirect stripping applies only to this attempt; later retries must start with the caller's headers.
+      const attemptHeaders = new Headers(headers);
       for (let count = 0; count <= limits.maxRedirects; count++) {
         response = await fetchImpl(url, {
-          method: "GET", headers, signal: controller.signal, redirect: "manual",
+          method: "GET", headers: attemptHeaders, signal: controller.signal, redirect: "manual",
           credentials: "omit", cache: "no-store", referrerPolicy: "no-referrer"
         });
         if (!redirects.has(response.status)) break;
@@ -115,7 +122,7 @@ export async function fetchJson(
         try { next = new URL(location, url); } catch { throw new ContentError("redirect_rejected", "Invalid redirect location"); }
         validateHttpsEndpoint(next.toString());
         if (next.origin !== initial.origin) throw new ContentError("redirect_rejected", "Cross-origin redirects are not permitted");
-        for (const name of Array.from(headers.keys())) if (secretHeader.test(name)) headers.delete(name);
+        for (const name of Array.from(attemptHeaders.keys())) if (secretHeader.test(name)) attemptHeaders.delete(name);
         url = next;
       }
       if (!response) throw new ContentError("network_error", "Endpoint unavailable");
@@ -165,6 +172,7 @@ export interface FieldMapping {
   field: string; source: string; type: BindingType; optional?: boolean; defaultValue?: JsonValue; transforms?: Transform[];
 }
 const blocked = new Set(["__proto__", "prototype", "constructor"]);
+/** Resolve one RFC 6901 JSON Pointer without traversing prototype-sensitive properties. */
 function atPointer(root: JsonValue, pointer: string, field: string): JsonValue | undefined {
   if (pointer === "") return root;
   if (!pointer.startsWith("/")) throw new MappingError(field, "invalid_mapping", "Source must be an RFC 6901 JSON Pointer");
@@ -179,6 +187,7 @@ function atPointer(root: JsonValue, pointer: string, field: string): JsonValue |
   }
   return value;
 }
+/** Apply one explicitly allowlisted data conversion and report a typed mapping error on failure. */
 function transform(value: JsonValue, name: Transform, field: string): JsonValue {
   try {
     switch (name) {
@@ -191,6 +200,7 @@ function transform(value: JsonValue, name: Transform, field: string): JsonValue 
     }
   } catch { throw new MappingError(field, "transform_failed", "Safe transformation failed"); }
 }
+/** Check a mapped JSON value against its declared binding type. */
 function typeMatches(value: JsonValue, type: BindingType): boolean {
   if (type === "any") return true;
   if (type === "string[]") return Array.isArray(value) && value.every(x => typeof x === "string");
@@ -198,7 +208,7 @@ function typeMatches(value: JsonValue, type: BindingType): boolean {
   if (type === "number") return typeof value === "number" && Number.isFinite(value);
   return typeof value === type;
 }
-/** Typed JSON Pointer field mapping with safe defaults and transformation allowlist. */
+/** Map JSON Pointer paths to typed output fields with optional/default values and safe transformations. */
 export function mapFields<T extends Record<string, JsonValue> = Record<string, JsonValue>>(input: JsonValue, mappings: readonly FieldMapping[]): T {
   validateJson(input);
   const output = Object.create(null) as Record<string, JsonValue>, seen = new Set<string>();
@@ -234,6 +244,7 @@ export function mapFields<T extends Record<string, JsonValue> = Record<string, J
 }
 
 export interface InspectedField { path: string; type: string; heterogeneous?: boolean; }
+/** Return a bounded path/type inventory for a response inspector or future field picker. */
 export function inspectResponse(input: JsonValue, maxFields = 500): { rootType: string; fields: InspectedField[]; truncated: boolean } {
   validateJson(input);
   if (!Number.isInteger(maxFields) || maxFields < 1 || maxFields > 5000) throw new ContentError("invalid_request", "maxFields must be between 1 and 5000");
