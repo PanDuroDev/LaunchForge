@@ -317,7 +317,7 @@ fn open_and_save_reject_symbolic_link_project_paths() {
 
     assert!(matches!(
         store.open(&link_path),
-        Err(ProjectError::SymbolicLinkProject(_))
+        Err(ProjectError::SymbolicLinkProject)
     ));
     assert!(matches!(
         store.save(&link_path, &project),
