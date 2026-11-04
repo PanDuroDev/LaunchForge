@@ -1,0 +1,105 @@
+name: Phase 0 Windows spike
+
+on:
+  pull_request:
+    paths:
+      - "poc/**"
+      - "scripts/measure-windows.ps1"
+      - "docs/phase-0/**"
+      - ".github/workflows/phase0-windows.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  windows-build:
+    runs-on: windows-2022
+    timeout-minutes: 30
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout the exact PR head
+        uses: actions/checkout@v4
+        with:
+          repository: ${{ github.event.pull_request.head.repo.full_name || github.repository }}
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          persist-credentials: false
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Set up Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Run contract and renderer tests
+        shell: pwsh
+        run: node --test .\poc\tests\phase0.test.mjs
+
+      - name: Validate Windows measurement script syntax
+        shell: pwsh
+        run: |
+          $tokens = $null
+          $errors = $null
+          [void][System.Management.Automation.Language.Parser]::ParseFile((Resolve-Path .\scripts\measure-windows.ps1).Path, [ref]$tokens, [ref]$errors)
+          if ($errors.Count -gt 0) {
+            $errors | ForEach-Object { Write-Host $_.ToString() }
+            exit 1
+          }
+
+      - name: Build standalone renderer export
+        shell: pwsh
+        run: node .\poc\scripts\build-export.mjs
+
+      - name: Resolve and validate the project application icon
+        shell: pwsh
+        run: node .\poc\scripts\prepare-tauri-icon.mjs
+
+      - name: Require committed lockfile and build Tauri with locked dependencies
+        shell: pwsh
+        run: |
+          $manifest = ".\poc\src-tauri\Cargo.toml"
+          $lockfile = ".\poc\src-tauri\Cargo.lock"
+          if (-not (Test-Path $lockfile)) {
+            throw "poc/src-tauri/Cargo.lock must be committed and reviewed before this build."
+          }
+          cargo build --locked --release --manifest-path $manifest
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+      - name: Smoke-test the standalone host process
+        shell: pwsh
+        run: |
+          $app = Resolve-Path .\poc\src-tauri\target\release\launchforge_phase0_spike.exe
+          $process = Start-Process -FilePath $app.Path -PassThru
+          try {
+            Start-Sleep -Seconds 8
+            $process.Refresh()
+            if ($process.HasExited) {
+              throw "Tauri host exited during the smoke-test window."
+            }
+            if ($process.MainWindowHandle -eq 0) {
+              throw "Tauri host process stayed alive but did not expose a main window handle."
+            }
+          }
+          finally {
+            Stop-Process -Id $process.Id -Force -ErrorAction SilentlyContinue
+          }
+
+      - name: Package portable spike
+        shell: pwsh
+        run: |
+          $package = Join-Path $env:RUNNER_TEMP "LaunchForge-Phase0-Portable"
+          New-Item -ItemType Directory -Force -Path $package | Out-Null
+          Copy-Item .\poc\src-tauri\target\release\launchforge_phase0_spike.exe $package
+          Copy-Item .\poc\dist\BUILD-METADATA.json $package
+          Copy-Item .\poc\src-tauri\Cargo.lock $package
+          Compress-Archive -Path (Join-Path $package "*") -DestinationPath (Join-Path $env:RUNNER_TEMP "LaunchForge-Phase0-Portable.zip") -Force
+
+      - name: Upload Windows build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: launchforge-phase0-windows-portable
+          path: ${{ runner.temp }}\LaunchForge-Phase0-Portable.zip
+          if-no-files-found: error

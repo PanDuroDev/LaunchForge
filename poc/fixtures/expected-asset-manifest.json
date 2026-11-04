@@ -1,0 +1,29 @@
+{
+  "entries": [
+    {
+      "id": "22222222-2222-4222-8222-222222222222",
+      "kind": "image",
+      "path": "assets/sample-cover.svg",
+      "sha256": "c8a6f59fc7fa2cc917444c31bd8b3ed7b9acbb67ccf5035ac37b442606456759"
+    },
+    {
+      "id": "cccccccc-cccc-4ccc-8ccc-cccccccccccc",
+      "kind": "applicationIcon",
+      "path": "assets/launcher-icon.ico",
+      "sha256": "6baf83dfba7d3bf63e876e6ba0ed7359729f4db265b857aa441e91b5a9a96e5a"
+    }
+  ],
+  "sha256": "8cff1045983470c1d5497530387c77af878cc395e9b827a683185b6c4088cb9b",
+  "serialization": {
+    "encoding": "UTF-8",
+    "bom": false,
+    "whitespace": "none",
+    "arrayOrder": "ascending byte-wise lowercase UUIDv4",
+    "objectKeyOrder": [
+      "id",
+      "kind",
+      "path",
+      "sha256"
+    ]
+  }
+}
