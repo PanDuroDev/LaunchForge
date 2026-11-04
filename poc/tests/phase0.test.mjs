@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { readFile, readdir } from "node:fs/promises";
+import { readFile, readdir, rm, writeFile } from "node:fs/promises";
 import { createHash } from "node:crypto";
 import { spawnSync } from "node:child_process";
 import path from "node:path";
@@ -149,7 +149,14 @@ test("local game binding resolves from project data", () => {
 });
 
 test("preview and exported package use byte-identical renderer and project contracts", async () => {
-  const result = spawnSync(process.execPath, [path.join(root, "scripts/build-export.mjs")], { encoding: "utf8" });
+  const unreferencedPath = path.join(root, "assets/unreferenced-phase0-test.txt");
+  await writeFile(unreferencedPath, "This file is deliberately not declared in the project.");
+  let result;
+  try {
+    result = spawnSync(process.execPath, [path.join(root, "scripts/build-export.mjs")], { encoding: "utf8" });
+  } finally {
+    await rm(unreferencedPath, { force: true });
+  }
   assert.equal(result.status, 0, result.stderr || result.stdout);
 
   const sourceRenderer = await readFile(path.join(root, "shared/renderer.mjs"));
@@ -175,8 +182,20 @@ test("preview and exported package use byte-identical renderer and project contr
   const sourceIcon = await readFile(path.join(root, "assets/launcher-icon.ico"));
   assert.equal(hash(exportedIcon), hash(sourceIcon));
   const metadata = JSON.parse(await readFile(path.join(root, "dist/BUILD-METADATA.json"), "utf8"));
+  const expectedManifest = await Promise.all(fixture.assets.map(async (asset) => ({
+    id: asset.id,
+    kind: asset.kind,
+    path: asset.path,
+    sha256: hash(await readFile(path.join(root, asset.path))),
+  })));
+  expectedManifest.sort((left, right) => left.id < right.id ? -1 : left.id > right.id ? 1 : 0);
+  assert.deepEqual(metadata.assetManifest, expectedManifest);
+  assert.equal(metadata.assetManifestSha256, hash(JSON.stringify(expectedManifest)));
   assert.equal(metadata.applicationIconAssetId, fixture.window.iconAssetId);
   assert.equal(metadata.applicationIconSha256, hash(sourceIcon));
+  const exportedAssetFiles = await readdir(path.join(root, "dist/assets"));
+  assert.deepEqual(exportedAssetFiles.sort(), fixture.assets.map((asset) => path.basename(asset.path)).sort());
+  assert.equal(exportedAssetFiles.includes("unreferenced-phase0-test.txt"), false);
 });
 
 
