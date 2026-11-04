@@ -1,12 +1,14 @@
 from __future__ import annotations
 
+import contextlib
 import hashlib
+import io
 import json
 import tempfile
 import unittest
 from pathlib import Path
 
-from tools.release.validate_inventory import ValidationError, validate_inventory
+from tools.release.validate_inventory import ValidationError, main, validate_inventory
 
 
 class PublisherInventoryTests(unittest.TestCase):
@@ -183,6 +185,28 @@ class PublisherInventoryTests(unittest.TestCase):
         self.write_inventory()
         with self.assertRaisesRegex(ValidationError, "stable releases"):
             validate_inventory(self.root, allow_unsigned=True)
+
+    def test_rejects_not_applicable_stable_artifact(self) -> None:
+        signing = self.inventory["artifacts"][0]["signing"]
+        signing.update(
+            status="not-applicable", subject=None, certificate_thumbprint=None,
+            timestamped=False, reason="incorrect exemption for executable installer"
+        )
+        self.assert_invalid("stable releases must contain only signed artifacts")
+
+    def test_cli_handles_extremely_large_json_integer_without_traceback(self) -> None:
+        raw = (self.root / "publisher-artifacts.v1.json").read_text(encoding="utf-8")
+        raw = raw.replace(
+            f'"size_bytes": {len(self.payload)}',
+            '"size_bytes": ' + ("9" * 5000),
+        )
+        (self.root / "publisher-artifacts.v1.json").write_text(raw, encoding="utf-8")
+        stderr = io.StringIO()
+        with contextlib.redirect_stderr(stderr):
+            exit_code = main([str(self.root)])
+        self.assertEqual(exit_code, 1)
+        self.assertIn("Release inventory validation failed", stderr.getvalue())
+        self.assertNotIn("Traceback", stderr.getvalue())
 
     def test_unsigned_preview_requires_explicit_override(self) -> None:
         self.inventory["channel"] = "preview"
