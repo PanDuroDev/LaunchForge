@@ -11,6 +11,7 @@ This is an isolated, dependency-free Python reference prototype for LaunchForge 
 - Cross-axis start/center/end/stretch alignment.
 - Logical horizontal ordering for RTL.
 - Overlay placement with directional edge alignment.
+- Overlay hit testing: later siblings win, and non-interactive overlays pass hits through.
 - Explicit overflow reporting and input validation.
 - Logical UI units only. DPI conversion is deliberately left to the renderer boundary.
 
