@@ -176,4 +176,4 @@ The integration owner should attach or link the following reviewed artifacts bef
 5. A named architecture owner and named maintenance ownership for the proposed capability.
 6. User evidence supporting exactly one Phase 6 candidate track.
 
-The contract-neutral conformance protocol is documented in `docs/phase6/CONFORMANCE_PLAN.md`, and the case-to-candidate-contract mapping is documented in `docs/phase6/CONTRACT_TRACEABILITY.md`. Until the required contracts, fixtures, implementations, and reviews exist, the Phase 6 deliverable remains a readiness/protocol handoff. It intentionally adds no product feature, public API, project schema, or platform-support promise.
+The contract-neutral conformance protocol is documented in `docs/phase6/CONFORMANCE_PLAN.md`, the case-to-candidate-contract mapping in `docs/phase6/CONTRACT_TRACEABILITY.md`, and the ordered prerequisite work in `docs/phase6/NEXT_HANDOFF.md`. Until the required contracts, fixtures, implementations, and reviews exist, the Phase 6 deliverable remains a readiness/protocol handoff. It intentionally adds no product feature, public API, project schema, or platform-support promise.
