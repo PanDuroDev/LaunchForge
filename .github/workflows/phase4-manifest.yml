@@ -1,0 +1,39 @@
+name: Phase 4 manifest and download prototype
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - "prototypes/phase4_1/**"
+      - "docs/contracts/game-distribution-v1.md"
+      - ".github/workflows/phase4-manifest.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  manifest-download-tests:
+    name: Manifest/download tests (Python ${{ matrix.python-version }})
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.10", "3.12", "3.13"]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+      - name: Install prototype crypto dependency
+        working-directory: prototypes/phase4_1
+        run: python -m pip install --disable-pip-version-check -e .
+      - name: Compile package and tests
+        working-directory: prototypes/phase4_1
+        run: python -m compileall -q launchforge_delivery tests
+      - name: Run manifest and bounded-download adversarial tests
+        working-directory: prototypes/phase4_1
+        run: python -m unittest discover -s tests -v
