@@ -62,6 +62,19 @@ The Phase 5.1 artifact inventory records build provenance, package metadata, has
 
 The product plan's provisional Windows-first direction is not a verified Studio or exported Launcher support claim. The plan itself says the technology direction remains provisional pending Phase 0 evidence.
 
+## 6.1 catalog preparation update
+
+The follow-up implementation now adds a machine-readable catalog and a dependency-free metadata validator:
+
+- `conformance/phase6-catalog.json`: 36 planned cases across eight conformance areas. Every case includes surfaces, prerequisite-area labels, expected behavior, and required evidence. All cases remain `planned`; none is represented as executed.
+- `tools/validate_conformance_catalog.py`: standard-library CLI that validates catalog shape, stable ID format/uniqueness, prefix/category consistency, product surfaces, dependency/evidence fields, and types.
+- `tests/test_phase6_catalog.py`: nine unit tests for the validator and catalog expectations.
+- `conformance/README.md`: reproducible commands and a clear distinction between catalog validation and actual product conformance.
+
+The actual JSON catalog was fetched from the feature branch and independently checked for valid JSON, 36 unique IDs, all eight expected categories, populated dependency/evidence fields, allowed surfaces, boolean mandatory flags, and planned lifecycle states; no structural errors were found. The Python validator and its nine unit tests were run locally against a generated 36-case fixture with the same catalog structure and ID/category families: all nine tests passed and compileall succeeded. A direct clone of GitHub was unavailable in the execution environment (DNS resolution failed), so the Python suite was not run against a local checkout of the exact committed JSON file.
+
+This remains 6.1 preparation only. The metadata validator does not load Launcher Projects or exercise Studio, Runtime, renderer, migrations, packaging, or security behavior. Those product tests remain blocked until their Phase 0–5 contracts and fixtures are approved.
+
 ## 6.1 — Compatibility and conformance foundation
 
 ### Exit gate
