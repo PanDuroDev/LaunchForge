@@ -13,7 +13,7 @@ function New-TestPackage {
         [bool] $IncludeLockfile = $true,
         [bool] $ValidIconReference = $true,
         [bool] $ValidManifestDigest = $true,
-        [string] $AssetPath = "assets/-sample-cover-.svg",
+        [string] $AssetPath = "assets/sample-cover.svg",
         [bool] $IncludeNestedNativeBinary = $false
     )
 
@@ -155,6 +155,14 @@ try {
     Assert-True ($unsafeAssetPath.exitCode -ne 0) "A package with a non-portable asset path was accepted."
     Assert-True ($unsafeAssetPath.report.failure -match "non-portable") "The unsafe asset path was rejected for an unexpected reason."
     Write-Host "PASS: non-portable asset paths are rejected."
+
+    $invalidLeadingCharacterZip = Join-Path $work "invalid-leading-character.zip"
+    $invalidLeadingCharacterReport = Join-Path $work "invalid-leading-character-report.json"
+    New-TestPackage -ZipPath $invalidLeadingCharacterZip -AssetPath "assets/-cover.svg"
+    $invalidLeadingCharacter = Invoke-Verifier -ZipPath $invalidLeadingCharacterZip -ReportPath $invalidLeadingCharacterReport
+    Assert-True ($invalidLeadingCharacter.exitCode -ne 0) "A package with a leading-hyphen asset filename was accepted."
+    Assert-True ($invalidLeadingCharacter.report.failure -match "non-portable") "The leading-character fixture failed for an unexpected reason."
+    Write-Host "PASS: asset filename start/end rules match schema v1."
 
     $traversalZip = Join-Path $work "traversal.zip"
     $stream = [IO.File]::Open($traversalZip, [IO.FileMode]::CreateNew, [IO.FileAccess]::ReadWrite, [IO.FileShare]::None)
