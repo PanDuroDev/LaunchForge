@@ -42,9 +42,8 @@
       ]
     },
     "event_code": {
-      "type": "string",
       "description": "No Runtime/Studio event-code registry has been approved; all values are rejected until a reviewed source of truth is defined.",
-      "enum": []
+      "not": {}
     },
     "outcome": {
       "enum": [
