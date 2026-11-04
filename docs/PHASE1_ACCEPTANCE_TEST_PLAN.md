@@ -55,14 +55,14 @@ Fixtures are test inputs, not product contracts. Their serialized shape must use
 | F-STARTER | Smallest valid starter Launcher Project with one configured local game entry | P1-A, P1-B, P1-C, P1-F |
 | F-COMPONENTS | One instance of each supported MVP component: container, text, image, button, and game entry | P1-B, P1-C |
 | F-ASSET-OK | Small deterministic local image asset referenced by the starter/project | P1-A, P1-C, P1-E |
-| F-ASSET-MISSING | Project reference to an asset removed after authoring | P1-A, P1-C, P1-E |
-| F-PROJECT-INVALID | A project invalid under the approved schema/validation rules | P1-A, P1-E |
-| F-PROJECT-UNSUPPORTED | Syntactically valid project containing a capability unsupported by the selected target | P1-C, P1-E |
+| F-ASSET-MISSING | Project reference to an asset removed after authoring | P1-A, P1-C, P1-E, P1-F |
+| F-PROJECT-INVALID | A project invalid under the approved schema/validation rules | P1-A, P1-E, P1-F |
+| F-PROJECT-UNSUPPORTED | Syntactically valid project containing a capability unsupported by the selected target | P1-C, P1-E, P1-F |
 | F-GAME-OK | Minimal, harmless test executable built for the supported Windows architecture; writes a test marker and exits | P1-D, P1-F |
 | F-GAME-MISSING | Approved test fixture path whose executable is absent | P1-D, P1-F |
 | F-GAME-UNAUTHORIZED | Executable path outside the approved launch target or imported-project approval boundary | P1-D |
-| F-SECRET | Synthetic, non-production secret sentinel matching an approved test scanner rule | P1-E |
-| F-LOG-REDACTION | Synthetic credential/token values passed through error and logging paths | P1-D, P1-E, P1-F |
+| F-SECRET | Synthetic, non-production secret sentinel matching an approved test scanner rule | P1-E, P1-F |
+| F-LOG-REDACTION | Synthetic credentials, tokens, personal-data values, and sensitive filesystem paths injected into success/failure and diagnostic contexts | P1-D, P1-E, P1-F |
 
 ### 3.1 Test executable provisioning
 
@@ -137,6 +137,7 @@ Preview/export parity must use the same component implementation wherever the ar
 | ID | Scenario | Expected result |
 |---|---|---|
 | D-01 | Start the exported Runtime with F-STARTER | Runtime loads the project without Studio |
+| D-11 | Launch F-STARTER with its configured window title, default/minimum dimensions, and resize flag | Runtime applies the approved title, width, height, minimum dimensions, and resizable behavior; invalid values fail with an actionable diagnostic |
 | D-02 | Launch F-GAME-OK through the configured game action | Only the configured test executable starts |
 | D-03 | Pass arguments containing spaces and shell metacharacters as individual arguments | The fixture receives the exact argument vector; no shell interpretation occurs |
 | D-04 | Launch F-GAME-MISSING | Runtime returns an actionable missing-executable diagnostic |
@@ -145,9 +146,11 @@ Preview/export parity must use the same component implementation wherever the ar
 | D-07 | Attempt a shell command, script, or URL-handler target | Runtime rejects the target; no shell/handler execution occurs |
 | D-08 | Supply an invalid working directory | Launch fails safely with a diagnostic |
 | D-09 | Force the test executable to exit non-zero | Runtime surfaces the process failure without crashing |
-| D-10 | Inspect logs after success and failure | No credential or prohibited sensitive value is exposed |
+| D-10 | Inspect logs after success and failure using F-LOG-REDACTION | Tokens, credentials, personal data, and sensitive filesystem paths are omitted or sanitized in logs and error output |
 
 The test must verify the resolved executable identity and actual argument vector. A test that merely checks that a process started is insufficient.
+
+**Window icon contract gap:** The current Phase 0 candidate project schema defines window title, width, height, minimum dimensions, and `resizable`, but it does not define an icon field or asset reference. The candidate BuildRequest/BuildResult also has no application-icon metadata. The product plan requires a launcher icon. The integration owner must approve where the icon reference lives and how it is packaged before the Runtime/clean-machine gate can claim icon support. Do not silently invent a field or mark icon verification passed without that contract.
 
 ## 8. Build and export — P1-E
 
@@ -177,7 +180,7 @@ The exact output format, dependency inventory, and deterministic-build definitio
 | F-05 | Invoke the configured game action | F-GAME-OK is launched and the harness records the expected executable, arguments, and working directory |
 | F-06 | Run missing-asset, invalid-project, and unsupported-feature cases | Each is reported with actionable diagnostics and does not produce a silently broken launcher |
 | F-07 | Run secret-scan rejection case | Export is blocked and the diagnostic does not reveal the secret sentinel |
-| F-08 | Review Runtime logs and diagnostics | Logs identify failures while redacting configured secrets and sensitive values |
+| F-08 | Review Runtime logs and diagnostics using F-LOG-REDACTION | Logs and diagnostic bundles identify failures while omitting or sanitizing tokens, credentials, personal data, and sensitive filesystem paths |
 | F-09 | Repeat the clean-machine workflow from a reset baseline | Results are reproducible using the documented setup |
 
 **Release gate:** F-01 through F-09 and all applicable upstream package tests must pass on the supported Windows baseline. A partial pass, successful compilation, or developer-machine-only execution is not completion of Phase 1.
