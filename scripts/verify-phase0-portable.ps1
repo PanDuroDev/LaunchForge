@@ -213,460 +213,53 @@ try {
 
     $sortedAssetIds = [string[]] @($assetIds)
     [Array]::Sort($sortedAssetIds, [StringComparer]::Ordinal)
-    if (($sortedAssetIds -join "`n") -cne ($assetIds -join "`n")) {
+    if (($sortedAssetIds -join "|") -cne ($assetIds -join "|")) {
         throw "The asset manifest must be sorted by stable asset ID."
     }
 
     $canonicalEntries = @(
         foreach ($asset in $manifest) {
-            if ([string] $asset.id -notmatch '^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}    $iconEntries = @($manifest | Where-Object {
-        $_.id -eq $metadata.applicationIconAssetId -and $_.kind -eq "applicationIcon"
-    })
-    if ($iconEntries.Count -ne 1 -or $iconEntries[0].sha256 -ne $metadata.applicationIconSha256) {
-        throw "The application icon reference does not resolve to one matching applicationIcon manifest entry."
-    }
-
-    $report.build = [ordered]@{
-        projectSchemaVersion = [int] $metadata.projectSchemaVersion
-        renderer = [string] $metadata.renderer
-        assetCount = $manifest.Count
-        assetManifestSha256 = [string] $metadata.assetManifestSha256
-        applicationIconAssetId = [string] $metadata.applicationIconAssetId
-        applicationIconSha256 = [string] $metadata.applicationIconSha256
-    }
-    $report.checks.buildMetadata = "passed"
-
-    if ($ValidateOnly) {
-        $report.checks.standardUser = "not-run"
-        $report.checks.webView2Runtime = "not-run"
-        $report.checks.applicationWindow = "not-run"
-        $report.checks.processLifetime = "not-run"
-    }
-    else {
-        $identity = [Security.Principal.WindowsIdentity]::GetCurrent()
-        $principal = New-Object Security.Principal.WindowsPrincipal($identity)
-        $isElevated = $principal.IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)
-        $os = Get-CimInstance Win32_OperatingSystem
-        $report.environment = [ordered]@{
-            os = $os.Caption
-            osVersion = $os.Version
-            architecture = $env:PROCESSOR_ARCHITECTURE
-            cpu = (Get-CimInstance Win32_Processor | Select-Object -First 1 -ExpandProperty Name)
-            logicalProcessors = [Environment]::ProcessorCount
-            totalMemoryMB = [Math]::Round($os.TotalVisibleMemorySize / 1024, 0)
-            standardUser = (-not $isElevated)
-            developerToolsPresent = @("node", "npm", "rustc", "cargo", "dotnet") | Where-Object {
-                $null -ne (Get-Command $_ -ErrorAction SilentlyContinue)
-            }
-        }
-        if ($isElevated) { throw "Run this check from a standard, non-elevated user session." }
-        $report.checks.standardUser = "passed"
-
-        $webView2 = @(Get-WebView2Installations)
-        $report.environment.webView2Versions = @($webView2 | ForEach-Object version)
-        if ($webView2.Count -eq 0) {
-            throw "Microsoft Edge WebView2 Runtime was not found. This portable spike does not bundle the runtime."
-        }
-        $report.checks.webView2Runtime = "passed"
-
-        $launchWatch = [Diagnostics.Stopwatch]::StartNew()
-        $process = Start-Process -FilePath $executablePath -WorkingDirectory $extractRoot -PassThru
-        $deadline = [DateTime]::UtcNow.AddSeconds($WindowTimeoutSeconds)
-        $windowHandle = [IntPtr]::Zero
-        while ([DateTime]::UtcNow -lt $deadline) {
-            $process.Refresh()
-            if ($process.HasExited) { throw "The standalone host exited before creating its main window." }
-            if ($process.MainWindowHandle -ne [IntPtr]::Zero) {
-                $windowHandle = $process.MainWindowHandle
-                break
-            }
-            Start-Sleep -Milliseconds 200
-        }
-        if ($windowHandle -eq [IntPtr]::Zero) {
-            throw "No main window handle appeared within $WindowTimeoutSeconds seconds."
-        }
-        $launchWatch.Stop()
-        $windowTitle = $process.MainWindowTitle
-        if ($windowTitle -notmatch "LaunchForge") {
-            throw "The process created a window, but its title was unexpected: $windowTitle"
-        }
-        $report.startupToWindowHandleMs = [Math]::Round($launchWatch.Elapsed.TotalMilliseconds, 2)
-        $report.windowTitle = $windowTitle
-        $report.checks.applicationWindow = "passed"
-
-        Start-Sleep -Seconds 2
-        $snapshot = @(Get-CimInstance -ClassName Win32_Process)
-        $treeIds = @(Get-ProcessTreeIds -RootPid $process.Id -Snapshot $snapshot)
-        $webViewProcesses = @($snapshot | Where-Object {
-            $treeIds -contains [int] $_.ProcessId -and $_.Name -ieq "msedgewebview2.exe"
-        })
-        $report.observedWebView2ProcessCount = $webViewProcesses.Count
-
-        $smokeDeadline = [DateTime]::UtcNow.AddSeconds($SmokeSeconds)
-        while ([DateTime]::UtcNow -lt $smokeDeadline) {
-            $process.Refresh()
-            if ($process.HasExited) {
-                throw "The standalone host exited during the $SmokeSeconds-second smoke window."
-            }
-            Start-Sleep -Seconds 1
-        }
-        $report.processId = $process.Id
-        $report.checks.processLifetime = "passed"
-    }
-
-    $report.status = "passed"
-}
-catch {
-    $report.status = "failed"
-    $report.failure = $_.Exception.Message
-}
-finally {
-    if ($null -ne $process) {
-        try {
-            $snapshot = @(Get-CimInstance -ClassName Win32_Process -ErrorAction SilentlyContinue)
-            $treeIds = @(Get-ProcessTreeIds -RootPid $process.Id -Snapshot $snapshot)
-            foreach ($id in $treeIds) {
-                if ($id -ne $process.Id) { Stop-Process -Id $id -Force -ErrorAction SilentlyContinue }
-            }
-            Stop-Process -Id $process.Id -Force -ErrorAction SilentlyContinue
-        }
-        catch {
-            # Cleanup must not hide the original validation result.
-        }
-    }
-    if ($null -ne $archive) { $archive.Dispose() }
-    if ($extractRoot -and (Test-Path -LiteralPath $extractRoot)) {
-        Remove-Item -LiteralPath $extractRoot -Recurse -Force -ErrorAction SilentlyContinue
-    }
-
-    $report.completedAtUtc = [DateTime]::UtcNow.ToString("o")
-    $reportPath = [IO.Path]::GetFullPath($OutputPath)
-    $reportDirectory = [IO.Path]::GetDirectoryName($reportPath)
-    if ($reportDirectory) { [void] [IO.Directory]::CreateDirectory($reportDirectory) }
-    $json = ConvertTo-Json -InputObject $report -Depth 10
-    [IO.File]::WriteAllText($reportPath, $json, (New-Object System.Text.UTF8Encoding($false)))
-}
-
-if ($report.status -ne "passed") {
-    Write-Host "Phase 0 package verification FAILED: $($report.failure)" -ForegroundColor Red
-    Write-Host "Report: $([IO.Path]::GetFullPath($OutputPath))"
-    exit 1
-}
-
-Write-Host "Phase 0 package verification PASSED."
-Write-Host "Report: $([IO.Path]::GetFullPath($OutputPath))"
-if (-not $ValidateOnly) {
-    Write-Host "Startup to main-window handle: $($report.startupToWindowHandleMs) ms (not first-frame latency)."
-}
- -or
-                [string]::IsNullOrWhiteSpace([string] $asset.kind) -or
-                [string]::IsNullOrWhiteSpace([string] $asset.path) -or
-                -not (Test-Sha256 ([string] $asset.sha256))) {
-                throw "The asset manifest contains an incomplete or invalid entry."
-            }
-            if ([string] $asset.kind -notin @("image", "applicationIcon")) {
-                throw "The asset manifest contains an unsupported asset kind."
-            }
-
+            $assetId = [string] $asset.id
+            $assetKind = [string] $asset.kind
             $assetPath = [string] $asset.path
-            if ($assetPath -notmatch '^assets/[A-Za-z0-9_][A-Za-z0-9._-]*[A-Za-z0-9_]    $iconEntries = @($manifest | Where-Object {
-        $_.id -eq $metadata.applicationIconAssetId -and $_.kind -eq "applicationIcon"
-    })
-    if ($iconEntries.Count -ne 1 -or $iconEntries[0].sha256 -ne $metadata.applicationIconSha256) {
-        throw "The application icon reference does not resolve to one matching applicationIcon manifest entry."
-    }
-
-    $report.build = [ordered]@{
-        projectSchemaVersion = [int] $metadata.projectSchemaVersion
-        renderer = [string] $metadata.renderer
-        assetCount = $manifest.Count
-        assetManifestSha256 = [string] $metadata.assetManifestSha256
-        applicationIconAssetId = [string] $metadata.applicationIconAssetId
-        applicationIconSha256 = [string] $metadata.applicationIconSha256
-    }
-    $report.checks.buildMetadata = "passed"
-
-    if ($ValidateOnly) {
-        $report.checks.standardUser = "not-run"
-        $report.checks.webView2Runtime = "not-run"
-        $report.checks.applicationWindow = "not-run"
-        $report.checks.processLifetime = "not-run"
-    }
-    else {
-        $identity = [Security.Principal.WindowsIdentity]::GetCurrent()
-        $principal = New-Object Security.Principal.WindowsPrincipal($identity)
-        $isElevated = $principal.IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)
-        $os = Get-CimInstance Win32_OperatingSystem
-        $report.environment = [ordered]@{
-            os = $os.Caption
-            osVersion = $os.Version
-            architecture = $env:PROCESSOR_ARCHITECTURE
-            cpu = (Get-CimInstance Win32_Processor | Select-Object -First 1 -ExpandProperty Name)
-            logicalProcessors = [Environment]::ProcessorCount
-            totalMemoryMB = [Math]::Round($os.TotalVisibleMemorySize / 1024, 0)
-            standardUser = (-not $isElevated)
-            developerToolsPresent = @("node", "npm", "rustc", "cargo", "dotnet") | Where-Object {
-                $null -ne (Get-Command $_ -ErrorAction SilentlyContinue)
+            $assetHash = [string] $asset.sha256
+            $parsedId = [Guid]::Empty
+            if ($assetId -cne $assetId.ToLowerInvariant() -or
+                -not [Guid]::TryParseExact($assetId, "D", [ref] $parsedId) -or
+                $assetId.Substring(14, 1) -ne "4" -or
+                $assetId.Substring(19, 1) -notin @("8", "9", "a", "b") -or
+                $assetKind -notin @("image", "applicationIcon") -or
+                -not (Test-Sha256 $assetHash)) {
+                throw "The asset manifest contains an invalid ID, kind, or SHA-256 value."
             }
-        }
-        if ($isElevated) { throw "Run this check from a standard, non-elevated user session." }
-        $report.checks.standardUser = "passed"
 
-        $webView2 = @(Get-WebView2Installations)
-        $report.environment.webView2Versions = @($webView2 | ForEach-Object version)
-        if ($webView2.Count -eq 0) {
-            throw "Microsoft Edge WebView2 Runtime was not found. This portable spike does not bundle the runtime."
-        }
-        $report.checks.webView2Runtime = "passed"
-
-        $launchWatch = [Diagnostics.Stopwatch]::StartNew()
-        $process = Start-Process -FilePath $executablePath -WorkingDirectory $extractRoot -PassThru
-        $deadline = [DateTime]::UtcNow.AddSeconds($WindowTimeoutSeconds)
-        $windowHandle = [IntPtr]::Zero
-        while ([DateTime]::UtcNow -lt $deadline) {
-            $process.Refresh()
-            if ($process.HasExited) { throw "The standalone host exited before creating its main window." }
-            if ($process.MainWindowHandle -ne [IntPtr]::Zero) {
-                $windowHandle = $process.MainWindowHandle
-                break
-            }
-            Start-Sleep -Milliseconds 200
-        }
-        if ($windowHandle -eq [IntPtr]::Zero) {
-            throw "No main window handle appeared within $WindowTimeoutSeconds seconds."
-        }
-        $launchWatch.Stop()
-        $windowTitle = $process.MainWindowTitle
-        if ($windowTitle -notmatch "LaunchForge") {
-            throw "The process created a window, but its title was unexpected: $windowTitle"
-        }
-        $report.startupToWindowHandleMs = [Math]::Round($launchWatch.Elapsed.TotalMilliseconds, 2)
-        $report.windowTitle = $windowTitle
-        $report.checks.applicationWindow = "passed"
-
-        Start-Sleep -Seconds 2
-        $snapshot = @(Get-CimInstance -ClassName Win32_Process)
-        $treeIds = @(Get-ProcessTreeIds -RootPid $process.Id -Snapshot $snapshot)
-        $webViewProcesses = @($snapshot | Where-Object {
-            $treeIds -contains [int] $_.ProcessId -and $_.Name -ieq "msedgewebview2.exe"
-        })
-        $report.observedWebView2ProcessCount = $webViewProcesses.Count
-
-        $smokeDeadline = [DateTime]::UtcNow.AddSeconds($SmokeSeconds)
-        while ([DateTime]::UtcNow -lt $smokeDeadline) {
-            $process.Refresh()
-            if ($process.HasExited) {
-                throw "The standalone host exited during the $SmokeSeconds-second smoke window."
-            }
-            Start-Sleep -Seconds 1
-        }
-        $report.processId = $process.Id
-        $report.checks.processLifetime = "passed"
-    }
-
-    $report.status = "passed"
-}
-catch {
-    $report.status = "failed"
-    $report.failure = $_.Exception.Message
-}
-finally {
-    if ($null -ne $process) {
-        try {
-            $snapshot = @(Get-CimInstance -ClassName Win32_Process -ErrorAction SilentlyContinue)
-            $treeIds = @(Get-ProcessTreeIds -RootPid $process.Id -Snapshot $snapshot)
-            foreach ($id in $treeIds) {
-                if ($id -ne $process.Id) { Stop-Process -Id $id -Force -ErrorAction SilentlyContinue }
-            }
-            Stop-Process -Id $process.Id -Force -ErrorAction SilentlyContinue
-        }
-        catch {
-            # Cleanup must not hide the original validation result.
-        }
-    }
-    if ($null -ne $archive) { $archive.Dispose() }
-    if ($extractRoot -and (Test-Path -LiteralPath $extractRoot)) {
-        Remove-Item -LiteralPath $extractRoot -Recurse -Force -ErrorAction SilentlyContinue
-    }
-
-    $report.completedAtUtc = [DateTime]::UtcNow.ToString("o")
-    $reportPath = [IO.Path]::GetFullPath($OutputPath)
-    $reportDirectory = [IO.Path]::GetDirectoryName($reportPath)
-    if ($reportDirectory) { [void] [IO.Directory]::CreateDirectory($reportDirectory) }
-    $json = ConvertTo-Json -InputObject $report -Depth 10
-    [IO.File]::WriteAllText($reportPath, $json, (New-Object System.Text.UTF8Encoding($false)))
-}
-
-if ($report.status -ne "passed") {
-    Write-Host "Phase 0 package verification FAILED: $($report.failure)" -ForegroundColor Red
-    Write-Host "Report: $([IO.Path]::GetFullPath($OutputPath))"
-    exit 1
-}
-
-Write-Host "Phase 0 package verification PASSED."
-Write-Host "Report: $([IO.Path]::GetFullPath($OutputPath))"
-if (-not $ValidateOnly) {
-    Write-Host "Startup to main-window handle: $($report.startupToWindowHandleMs) ms (not first-frame latency)."
-}
-) {
-                throw "The asset manifest contains a non-portable project asset path: $assetPath"
+            if (-not $assetPath.StartsWith("assets/", [StringComparison]::Ordinal) -or
+                $assetPath.Length -le 7 -or
+                $assetPath.Contains("\") -or
+                $assetPath.Contains(":") -or
+                $assetPath.Contains("..") -or
+                $assetPath.EndsWith(".") -or
+                $assetPath.EndsWith(" ")) {
+                throw "The asset manifest contains a non-portable project asset path."
             }
             $assetFileName = $assetPath.Substring(7)
-            $assetStem = [IO.Path]::GetFileNameWithoutExtension($assetFileName)
-            if ($assetStem -match '^(con|prn|aux|nul|com[1-9]|lpt[1-9])    $iconEntries = @($manifest | Where-Object {
-        $_.id -eq $metadata.applicationIconAssetId -and $_.kind -eq "applicationIcon"
-    })
-    if ($iconEntries.Count -ne 1 -or $iconEntries[0].sha256 -ne $metadata.applicationIconSha256) {
-        throw "The application icon reference does not resolve to one matching applicationIcon manifest entry."
-    }
-
-    $report.build = [ordered]@{
-        projectSchemaVersion = [int] $metadata.projectSchemaVersion
-        renderer = [string] $metadata.renderer
-        assetCount = $manifest.Count
-        assetManifestSha256 = [string] $metadata.assetManifestSha256
-        applicationIconAssetId = [string] $metadata.applicationIconAssetId
-        applicationIconSha256 = [string] $metadata.applicationIconSha256
-    }
-    $report.checks.buildMetadata = "passed"
-
-    if ($ValidateOnly) {
-        $report.checks.standardUser = "not-run"
-        $report.checks.webView2Runtime = "not-run"
-        $report.checks.applicationWindow = "not-run"
-        $report.checks.processLifetime = "not-run"
-    }
-    else {
-        $identity = [Security.Principal.WindowsIdentity]::GetCurrent()
-        $principal = New-Object Security.Principal.WindowsPrincipal($identity)
-        $isElevated = $principal.IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)
-        $os = Get-CimInstance Win32_OperatingSystem
-        $report.environment = [ordered]@{
-            os = $os.Caption
-            osVersion = $os.Version
-            architecture = $env:PROCESSOR_ARCHITECTURE
-            cpu = (Get-CimInstance Win32_Processor | Select-Object -First 1 -ExpandProperty Name)
-            logicalProcessors = [Environment]::ProcessorCount
-            totalMemoryMB = [Math]::Round($os.TotalVisibleMemorySize / 1024, 0)
-            standardUser = (-not $isElevated)
-            developerToolsPresent = @("node", "npm", "rustc", "cargo", "dotnet") | Where-Object {
-                $null -ne (Get-Command $_ -ErrorAction SilentlyContinue)
+            if ($assetFileName -match '[^A-Za-z0-9._-]' -or
+                $assetFileName.Substring(0, 1) -match '[^A-Za-z0-9_]' -or
+                $assetFileName.Substring($assetFileName.Length - 1, 1) -match '[^A-Za-z0-9_]') {
+                throw "The asset manifest contains a non-portable Windows filename."
             }
-        }
-        if ($isElevated) { throw "Run this check from a standard, non-elevated user session." }
-        $report.checks.standardUser = "passed"
-
-        $webView2 = @(Get-WebView2Installations)
-        $report.environment.webView2Versions = @($webView2 | ForEach-Object version)
-        if ($webView2.Count -eq 0) {
-            throw "Microsoft Edge WebView2 Runtime was not found. This portable spike does not bundle the runtime."
-        }
-        $report.checks.webView2Runtime = "passed"
-
-        $launchWatch = [Diagnostics.Stopwatch]::StartNew()
-        $process = Start-Process -FilePath $executablePath -WorkingDirectory $extractRoot -PassThru
-        $deadline = [DateTime]::UtcNow.AddSeconds($WindowTimeoutSeconds)
-        $windowHandle = [IntPtr]::Zero
-        while ([DateTime]::UtcNow -lt $deadline) {
-            $process.Refresh()
-            if ($process.HasExited) { throw "The standalone host exited before creating its main window." }
-            if ($process.MainWindowHandle -ne [IntPtr]::Zero) {
-                $windowHandle = $process.MainWindowHandle
-                break
+            $assetStem = [IO.Path]::GetFileNameWithoutExtension($assetFileName).ToUpperInvariant()
+            if ($assetStem -in @("CON", "PRN", "AUX", "NUL", "COM1", "COM2", "COM3", "COM4", "COM5", "COM6", "COM7", "COM8", "COM9", "LPT1", "LPT2", "LPT3", "LPT4", "LPT5", "LPT6", "LPT7", "LPT8", "LPT9")) {
+                throw "The asset manifest contains a reserved Windows device filename."
             }
-            Start-Sleep -Milliseconds 200
-        }
-        if ($windowHandle -eq [IntPtr]::Zero) {
-            throw "No main window handle appeared within $WindowTimeoutSeconds seconds."
-        }
-        $launchWatch.Stop()
-        $windowTitle = $process.MainWindowTitle
-        if ($windowTitle -notmatch "LaunchForge") {
-            throw "The process created a window, but its title was unexpected: $windowTitle"
-        }
-        $report.startupToWindowHandleMs = [Math]::Round($launchWatch.Elapsed.TotalMilliseconds, 2)
-        $report.windowTitle = $windowTitle
-        $report.checks.applicationWindow = "passed"
-
-        Start-Sleep -Seconds 2
-        $snapshot = @(Get-CimInstance -ClassName Win32_Process)
-        $treeIds = @(Get-ProcessTreeIds -RootPid $process.Id -Snapshot $snapshot)
-        $webViewProcesses = @($snapshot | Where-Object {
-            $treeIds -contains [int] $_.ProcessId -and $_.Name -ieq "msedgewebview2.exe"
-        })
-        $report.observedWebView2ProcessCount = $webViewProcesses.Count
-
-        $smokeDeadline = [DateTime]::UtcNow.AddSeconds($SmokeSeconds)
-        while ([DateTime]::UtcNow -lt $smokeDeadline) {
-            $process.Refresh()
-            if ($process.HasExited) {
-                throw "The standalone host exited during the $SmokeSeconds-second smoke window."
-            }
-            Start-Sleep -Seconds 1
-        }
-        $report.processId = $process.Id
-        $report.checks.processLifetime = "passed"
-    }
-
-    $report.status = "passed"
-}
-catch {
-    $report.status = "failed"
-    $report.failure = $_.Exception.Message
-}
-finally {
-    if ($null -ne $process) {
-        try {
-            $snapshot = @(Get-CimInstance -ClassName Win32_Process -ErrorAction SilentlyContinue)
-            $treeIds = @(Get-ProcessTreeIds -RootPid $process.Id -Snapshot $snapshot)
-            foreach ($id in $treeIds) {
-                if ($id -ne $process.Id) { Stop-Process -Id $id -Force -ErrorAction SilentlyContinue }
-            }
-            Stop-Process -Id $process.Id -Force -ErrorAction SilentlyContinue
-        }
-        catch {
-            # Cleanup must not hide the original validation result.
-        }
-    }
-    if ($null -ne $archive) { $archive.Dispose() }
-    if ($extractRoot -and (Test-Path -LiteralPath $extractRoot)) {
-        Remove-Item -LiteralPath $extractRoot -Recurse -Force -ErrorAction SilentlyContinue
-    }
-
-    $report.completedAtUtc = [DateTime]::UtcNow.ToString("o")
-    $reportPath = [IO.Path]::GetFullPath($OutputPath)
-    $reportDirectory = [IO.Path]::GetDirectoryName($reportPath)
-    if ($reportDirectory) { [void] [IO.Directory]::CreateDirectory($reportDirectory) }
-    $json = ConvertTo-Json -InputObject $report -Depth 10
-    [IO.File]::WriteAllText($reportPath, $json, (New-Object System.Text.UTF8Encoding($false)))
-}
-
-if ($report.status -ne "passed") {
-    Write-Host "Phase 0 package verification FAILED: $($report.failure)" -ForegroundColor Red
-    Write-Host "Report: $([IO.Path]::GetFullPath($OutputPath))"
-    exit 1
-}
-
-Write-Host "Phase 0 package verification PASSED."
-Write-Host "Report: $([IO.Path]::GetFullPath($OutputPath))"
-if (-not $ValidateOnly) {
-    Write-Host "Startup to main-window handle: $($report.startupToWindowHandleMs) ms (not first-frame latency)."
-}
-) {
-                throw "The asset manifest contains a reserved Windows device name: $assetPath"
-            }
-            if ($asset.kind -eq "applicationIcon" -and -not $assetPath.EndsWith(".ico", [StringComparison]::Ordinal)) {
+            if ($assetKind -eq "applicationIcon" -and -not $assetPath.EndsWith(".ico", [StringComparison]::Ordinal)) {
                 throw "An applicationIcon asset must use a lowercase .ico path."
             }
-            if ($asset.kind -eq "image" -and $assetPath.EndsWith(".ico", [StringComparison]::OrdinalIgnoreCase)) {
+            if ($assetKind -eq "image" -and $assetPath.EndsWith(".ico", [StringComparison]::OrdinalIgnoreCase)) {
                 throw "An ICO asset must be classified as applicationIcon."
             }
 
-            $idJson = ConvertTo-Json -InputObject ([string] $asset.id) -Compress
-            $kindJson = ConvertTo-Json -InputObject ([string] $asset.kind) -Compress
-            $pathJson = ConvertTo-Json -InputObject $assetPath -Compress
-            $hashJson = ConvertTo-Json -InputObject ([string] $asset.sha256) -Compress
-            '{"id":' + $idJson + ',"kind":' + $kindJson + ',"path":' + $pathJson + ',"sha256":' + $hashJson + '}'
+            '{"id":"' + $assetId + '","kind":"' + $assetKind + '","path":"' + $assetPath + '","sha256":"' + $assetHash + '"}'
         }
     )
     $canonicalManifest = "[" + ($canonicalEntries -join ",") + "]"
