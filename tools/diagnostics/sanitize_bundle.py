@@ -36,25 +36,9 @@ _ALLOWED_FIELDS = _REQUIRED_FIELDS | _OPTIONAL_FIELDS
 _SEVERITIES = {"debug", "info", "warning", "error", "critical"}
 _COMPONENTS = {"studio", "runtime", "launcher_updater", "game_delivery", "packager", "bootstrapper"}
 _OUTCOMES = {"started", "completed", "failed", "cancelled", "recovered", "recovery_failed"}
-_EVENT_CODES = {
-    "LF_APP_START_FAILED",
-    "LF_BOOTSTRAP_FAILED",
-    "LF_CONNECTION_FAILED",
-    "LF_EXPORT_FAILED",
-    "LF_GAME_INSTALL_FAILED",
-    "LF_GAME_LAUNCH_FAILED",
-    "LF_GAME_REPAIR_FAILED",
-    "LF_GAME_UPDATE_FAILED",
-    "LF_GAME_VERIFY_FAILED",
-    "LF_PROJECT_LOAD_FAILED",
-    "LF_PROJECT_SAVE_FAILED",
-    "LF_RECOVERY_REQUIRED",
-    "LF_RECOVERY_SUCCEEDED",
-    "LF_UPDATE_CHECK_FAILED",
-    "LF_UPDATE_FAILED",
-    "LF_UPDATE_ROLLBACK",
-    "LF_UPDATE_SUCCEEDED",
-}
+# Runtime/Studio have not yet approved an event-code source of truth.
+# Fail closed until those producers provide a reviewed, versioned registry.
+_EVENT_CODES: set[str] = set()
 _ERROR_CODES = {
     "LF_IO_DENIED", "LF_NETWORK_TIMEOUT", "LF_NETWORK_TLS", "LF_METADATA_EXPIRED",
     "LF_METADATA_SIGNATURE", "LF_METADATA_ROLLBACK", "LF_TARGET_HASH",
@@ -149,8 +133,6 @@ def sanitize_record(record: Any) -> dict[str, Any] | None:
         return None
     if not _allowed_string(record["component"], _COMPONENTS):
         return None
-    if not _allowed_string(record["event_code"], _EVENT_CODES):
-        return None
     if not _allowed_string(record["outcome"], _OUTCOMES):
         return None
 
@@ -198,6 +180,8 @@ def sanitize_record(record: Any) -> dict[str, Any] | None:
         if not isinstance(value, str) or not _CORRELATION_RE.fullmatch(value):
             return None
         safe["correlation_id"] = value
+    if not _allowed_string(record["event_code"], _EVENT_CODES):
+        return None
     return safe
 
 
