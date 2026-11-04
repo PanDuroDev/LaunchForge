@@ -29,7 +29,7 @@ class TransactionTests(unittest.TestCase):
     def setUp(self):
         """Create the temporary install root, source artifacts, and transaction engine for the test."""
         self.temp = tempfile.TemporaryDirectory()
-        self.base = Path(self.temp.name)
+        self.base = Path(self.temp.name).resolve()
         self.install = self.base / "InstalledGame"
         self.sources = self.base / "sources"
         self.sources.mkdir()
