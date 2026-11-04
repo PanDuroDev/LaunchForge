@@ -1,0 +1,59 @@
+name: Phase 5 diagnostics sanitizer validation
+
+on:
+  pull_request:
+    paths:
+      - "tools/diagnostics/**"
+      - "tests/diagnostics/**"
+      - "schemas/diagnostic-event-v1.schema.json"
+      - "docs/DIAGNOSTICS_AND_CRASH_REPORTING.md"
+      - ".github/workflows/phase5-diagnostics.yml"
+  push:
+    branches:
+      - ai6/phase5-3-security-diagnostics-gate
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.11", "3.12", "3.13"]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+      - name: Compile diagnostics sanitizer and tests
+        run: python -m py_compile tools/diagnostics/sanitize_bundle.py tests/diagnostics/test_sanitize_bundle.py
+      - name: Run diagnostics sanitizer tests
+        run: python -m unittest discover -s tests/diagnostics -v
+      - name: Install pinned JSON Schema validator
+        run: python -m pip install --disable-pip-version-check jsonschema==4.23.0
+      - name: Validate diagnostic schema and fail-closed event policy
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          from jsonschema import Draft202012Validator, ValidationError
+
+          schema = json.loads(Path("schemas/diagnostic-event-v1.schema.json").read_text(encoding="utf-8"))
+          Draft202012Validator.check_schema(schema)
+          sample = {
+              "schema_version": 1,
+              "timestamp_utc": "2026-11-04T20:00:00Z",
+              "severity": "error",
+              "component": "launcher_updater",
+              "event_code": "LF_UPDATE_FAILED",
+              "outcome": "failed",
+          }
+          try:
+              Draft202012Validator(schema).validate(sample)
+          except ValidationError:
+              print("Diagnostic schema is valid and rejects unregistered event codes.")
+          else:
+              raise SystemExit("Diagnostic schema unexpectedly accepted an unregistered event code.")
+          PY
