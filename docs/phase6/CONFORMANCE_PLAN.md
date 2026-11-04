@@ -197,7 +197,7 @@ Do not run these tests against guessed interfaces. The implementation sequence i
 
 1. Approve Phase 0 stack, threat model, project format, component/renderer contract, Runtime/build boundary, and baseline measurement protocol.
 2. Accept Phase 1 schema, fixture, migration metadata, and preview/export behavior contracts.
-3. Accept the Phase 2 layout/assets/localization contracts and Phase 3 binding/action/security contracts that affect project compatibility.
+3. Accept the Phase 2 layout/assets/localization contracts and Phase 3 binding/action/security contracts that affect project compatibility. PR #21's Stage 3.1 prototype must first receive contract review; DNS/IP egress policy must be implemented in the privileged host, not inferred from HTTPS/same-origin redirects.
 4. Accept the Phase 4 manifest/filesystem/lifecycle contracts and Phase 5 package/update/trust/recovery contracts.
 5. Implement the harness and adapters against the approved APIs, then run the inventory above on each claimed target tuple.
 6. Publish the support matrix only after evidence review by the architecture/integration owner and named maintainer.
@@ -207,9 +207,12 @@ Do not run these tests against guessed interfaces. The implementation sequence i
 - `main` now contains the Phase 6 catalog/metadata validator and the merged Phase 2.1 Python layout reference with multi-version CI. It still has no production Studio application, exported Runtime, production renderer integration, migration engine, or Windows package lifecycle.
 - PR #9 is a Phase 1 readiness document, not implementation; it remains open and unmerged.
 - PR #10 is a Phase 2 authoring specification, not production Studio implementation; it remains open and unmerged.
+- PR #13's Phase 2.1 reference geometry was merged into main and passes Python 3.10–3.13 CI, but remains separate from the production renderer.
 - PR #13's Phase 2.1 layout reference was merged into main. Its Python CI passed on 3.10–3.13, but it remains a reference prototype, not a production renderer/Studio integration.
 - PR #12 proposes a Phase 4.1 distribution manifest and Python downloader prototype. Its contract is proposed/prototype-only and not approved for Runtime integration. Its PR reports 28 passing tests, but transport is mocked and install transactions, Runtime APIs, and recovery are not implemented. The PR remains open and unmerged.
-- PR #17 adds POSIX-only install/update/repair/verify/recovery and lifecycle reference code; it explicitly has no Windows backend or native Runtime integration.
+- PR #17 adds POSIX-only transactional install/update/repair/verify/recovery and a lifecycle adapter, but still has no Windows backend or native Runtime integration.
+- PR #14's Phase 5.1 publisher inventory validator is merged into main. It improves publisher-side artifact QA but is not client updater metadata or a trust statement.
+- PR #15 proposes TUF updater trust/recovery but does not implement an updater. PR #18 adds diagnostics/security/release-gate materials and explicitly records production FAIL / NO-GO until Runtime/package, Windows baseline, updater, clean install/recovery and Runtime diagnostics integration are proven.
 - PR #14 adds publisher artifact-inventory validation, but the inventory is explicitly not a launcher updater manifest or trust statement. PR #15 proposes TUF updater trust/recovery but does not implement an updater. PR #18 adds diagnostics/security/release-gate materials and explicitly records production **FAIL / NO-GO** until Runtime/package, Windows baseline, updater, clean install/recovery and Runtime diagnostics integration are proven.
 
 Therefore all executable conformance cases in this document are currently **BLOCKED**. This is an accurate result, not a failure of the proposed test design.
@@ -234,7 +237,7 @@ Until then, this protocol is a specification/handoff artifact and does not annou
 
 The planned cases are mirrored in `conformance/phase6-catalog.json`. Each entry records its stable test ID, category, scenario, expected behavior, applicable product surfaces, prerequisite-area labels, required evidence, mandatory flag, and lifecycle state. The catalog also has one canonical `dependency_registry`; every case dependency must match one registered identifier and the registry must not contain duplicate identifiers.
 
-All 36 entries currently use `lifecycle: planned`. The 38 registered dependency strings are planning labels only and are not approved API names or proof that the dependencies exist. Keep each prerequisite area under one canonical label; do not introduce spelling/plural aliases.
+All 40 entries currently use `lifecycle: planned`. The 38 registered dependency strings are planning labels only and are not approved API names or proof that the dependencies exist. Keep each prerequisite area under one canonical label; do not introduce spelling/plural aliases.
 
 Validate the catalog structure from the repository root:
 
@@ -254,7 +257,7 @@ The repository workflow `.github/workflows/phase6-catalog.yml` runs on relevant 
 2. `python -m unittest discover -s tests -p "test_phase6_catalog.py" -v`
 3. `python -m compileall -q tools/validate_conformance_catalog.py tests/test_phase6_catalog.py`
 
-A passing workflow demonstrates catalog metadata/test-harness health only. It is not a substitute for product-level migration, renderer, Runtime, packaging, security, or support-matrix conformance. The initial workflow attempt exposed an invalid `actions/setup-python` `cache: false` setting; the setting was removed, and the subsequent run passed on the exact PR checkout (36 catalog cases, 13 unit tests, compileall).
+A passing workflow demonstrates catalog metadata/test-harness health only. It is not a substitute for product-level migration, renderer, Runtime, packaging, security, or support-matrix conformance. The initial workflow attempt exposed an invalid `actions/setup-python` `cache: false` setting; the setting was removed, and the subsequent run passed on the exact PR checkout (the earlier baseline of 36 catalog cases, 13 unit tests, compileall).
 
 ## 9. Upstream contract traceability
 
@@ -264,9 +267,29 @@ The traceability map is provisional. Do not encode candidate schema/API details 
 
 ## 10. Latest prerequisite blockers (2026-11-04)
 
-- Phase 0 PR #16's first Tauri run [#41919048099](https://github.com/PanDuroDev/LaunchForge/actions/runs/41919048099) failed because `poc/src-tauri/icons/icon.ico` was missing. That was fixed: the subsequent Windows run [#41919850333](https://github.com/PanDuroDev/LaunchForge/actions/runs/41919850333) passed contract/renderer tests, renderer export, Rust lockfile generation/build, host smoke test, portable packaging and artifact upload. However, the latest head [#41920824672](https://github.com/PanDuroDev/LaunchForge/actions/runs/41920824672) fails 12/13 tests at `poc/tests/phase0.test.mjs:53`: the ICO negative fixture truncates the last file byte, which may be outside declared image payload ranges. Correct the fixture and rerun. The current Phase 0 tree still has no tracked `poc/src-tauri/Cargo.lock`; commit/review it. Clean-machine/WebView2, DPI/accessibility and performance evidence remain outstanding.
+- Phase 0 PR #16's initial Windows run [#41919048099](https://github.com/PanDuroDev/LaunchForge/actions/runs/41919048099) failed because the configured Windows icon resource was missing. That was fixed; contract/renderer/export/icon checks now pass. Windows run [#41922565161](https://github.com/PanDuroDev/LaunchForge/actions/runs/41922565161) completed the Tauri build and smoke-test but failed when pushing the generated `poc/src-tauri/Cargo.lock` after the remote branch advanced (non-fast-forward). The latest run [#41923627391](https://github.com/PanDuroDev/LaunchForge/actions/runs/41923627391) passed contract/renderer, measurement-script, renderer export and icon validation and is in the locked Tauri build step; lockfile persistence, smoke/package/upload remain pending. The clean-machine/WebView2, DPI/accessibility and performance evidence remains outstanding.
 - Phase 4 PR #17 is POSIX-only and explicitly has no Windows backend. Its 40 local tests do not demonstrate Windows/NTFS path safety, reparse-point handling, real host process launch or power-loss recovery.
-- Phase 0's candidate JSON Schema accepts uppercase and lowercase UUIDv4 hex, while the semantic validator regex accepts lowercase only. The integration owner must choose and test one canonical rule before Phase 1 freezes the schema.
+- Phase 0's latest candidate resolves UUIDv4 to canonical lowercase-only in both JSON Schema and the semantic validator. The current Phase 1.1 Draft is PR #22; it aligns with lowercase-only UUIDs, but its 24 Rust tests have not been run and the crate remains unmerged/unintegrated.
 - Phase 5 PR #18 records **FAIL / NO-GO** because the accepted Runtime/package, supported Windows baseline, updater, clean-machine install/recovery evidence and Runtime diagnostics integration are absent. PRs #14 and #15 remain unmerged QA/design contributions, not a production updater.
 
 These failures and boundaries keep executable Phase 6 product conformance, 6.2 expansion selection, and 6.3 support blocked. Do not lower the gate because isolated test suites pass on another OS or a reference prototype passes.
+
+## 11. Newly tracked project-format cases
+
+- `LF-COMPAT-007` requires the approved UUID canonicalization rule to be implemented identically by the project JSON Schema and semantic validator; the latest Phase 0 candidate is canonical lowercase-only, so uppercase spellings must be rejected unless the integration owner approves a replacement rule.
+- `LF-COMPAT-008` requires the approved application-icon reference to validate and the complete declared ICO payload to be bounded and embedded byte-for-byte in the package.
+
+Both remain planned until Phase 0/1 approves the source contracts and supplies runnable fixtures. The catalog records the current candidate rule but does not itself approve or change schema fields.
+
+## 12. Phase 3.1 data and network conformance
+
+- `LF-CAP-006` covers the approved JSON Pointer and typed binding semantics: valid/invalid pointer escapes, array indices, prototype-sensitive segments, declared output types, optional/default values, duplicate fields, and safe transformation limits. The standalone Phase 3.1 prototype has fixture tests, but these semantics must not be treated as project schema or Runtime contracts until accepted.
+- `LF-SEC-006` covers host-enforced DNS/IP egress policy. HTTPS scheme validation and same-origin redirects do not block loopback/private/reserved addresses or DNS rebinding. The privileged host must enforce approved destination policy after resolution and at connection time; tests must prove denied destinations cause no connection.
+
+PR #21's isolated Node CI passed typecheck and fixture tests in run [#41923174067](https://github.com/PanDuroDev/LaunchForge/actions/runs/41923174067). This is evidence for the prototype package only. No Studio/Runtime integration, DNS/IP host guard, credential storage, export scanning, or preview/Runtime parity is claimed.
+
+## 13. Latest Phase 1/3 and Phase 5 partial handoffs
+
+- Phase 1.1 Draft [PR #22](https://github.com/PanDuroDev/LaunchForge/pull/22) consumes the lowercase-only UUIDv4 and application-icon candidate rules. It has 24 authored Rust integration tests, but `cargo test` has not run and the crate is not integrated into the root workspace/Studio. The PR remains Draft and depends on the open Phase 0 PR #16.
+- Phase 3.1 [PR #21](https://github.com/PanDuroDev/LaunchForge/pull/21) is an open renderer-neutral TypeScript prototype. Its latest CI [#41923553906](https://github.com/PanDuroDev/LaunchForge/actions/runs/41923553906) passed typecheck and fixture tests. It does not enforce DNS/IP egress protection or integrate with Studio/Runtime; CodeRabbit review was still in progress at the latest inspection.
+- Phase 5.1 [PR #14](https://github.com/PanDuroDev/LaunchForge/pull/14) has merged publisher-side artifact inventory validation into main. It is not updater trust metadata. PR #15 remains a TUF design proposal, and PR #18 remains a documented whole-product FAIL / NO-GO.
