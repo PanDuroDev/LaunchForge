@@ -243,6 +243,10 @@ try {
     if (@($assetIds | Select-Object -Unique).Count -ne $assetIds.Count) {
         throw "The asset manifest contains duplicate asset IDs."
     }
+    $assetPathKeys = @($manifest | ForEach-Object { ([string] $_.path).ToLowerInvariant() })
+    if (@($assetPathKeys | Select-Object -Unique).Count -ne $assetPathKeys.Count) {
+        throw "The asset manifest contains duplicate paths using Windows case-insensitive comparison."
+    }
 
     $sortedAssetIds = [string[]] @($assetIds)
     [Array]::Sort($sortedAssetIds, [StringComparer]::Ordinal)
@@ -275,7 +279,7 @@ try {
                 throw "The asset manifest contains a non-portable project asset path."
             }
             $assetFileName = $assetPath.Substring(7)
-            $hasInvalidFilenameCharacter = $false
+            $hasInvalidFilenameCharacter = $assetFileName.Length -gt 120
             foreach ($character in $assetFileName.ToCharArray()) {
                 $characterCode = [int] $character
                 $isAllowedCharacter = ($characterCode -ge 48 -and $characterCode -le 57) -or
@@ -287,9 +291,16 @@ try {
                     break
                 }
             }
-            if ($hasInvalidFilenameCharacter -or
-                $assetFileName.StartsWith(".") -or
-                $assetFileName.EndsWith(".")) {
+            $firstCharacterCode = [int] $assetFileName[0]
+            $lastCharacterCode = [int] $assetFileName[$assetFileName.Length - 1]
+            $firstIsAlphanumeric = ($firstCharacterCode -ge 48 -and $firstCharacterCode -le 57) -or
+                ($firstCharacterCode -ge 65 -and $firstCharacterCode -le 90) -or
+                ($firstCharacterCode -ge 97 -and $firstCharacterCode -le 122)
+            $lastIsPortable = $lastCharacterCode -eq 45 -or $lastCharacterCode -eq 95 -or
+                ($lastCharacterCode -ge 48 -and $lastCharacterCode -le 57) -or
+                ($lastCharacterCode -ge 65 -and $lastCharacterCode -le 90) -or
+                ($lastCharacterCode -ge 97 -and $lastCharacterCode -le 122)
+            if ($hasInvalidFilenameCharacter -or -not $firstIsAlphanumeric -or -not $lastIsPortable) {
                 throw "The asset manifest contains a non-portable Windows filename."
             }
             $assetStem = [IO.Path]::GetFileNameWithoutExtension($assetFileName).ToUpperInvariant()
