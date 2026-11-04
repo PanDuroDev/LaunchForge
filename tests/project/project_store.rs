@@ -181,6 +181,19 @@ fn semantic_validation_rejects_duplicate_ids_across_entity_types() {
 }
 
 #[test]
+fn semantic_validation_treats_uuid_hex_case_as_the_same_identity() {
+    let store = store();
+    let mut project = sample_project();
+    project["projectId"] = json!("abcdefab-cdef-4abc-8def-abcdefabcdef");
+    project["assets"][0]["id"] = json!("ABCDEFAB-CDEF-4ABC-8DEF-ABCDEFABCDEF");
+
+    expect_validation_code(
+        store.validator().validate(&project).unwrap_err(),
+        "DUPLICATE_ID",
+    );
+}
+
+#[test]
 fn semantic_validation_rejects_missing_asset_and_game_references() {
     let store = store();
 
@@ -240,11 +253,17 @@ fn semantic_validation_rejects_case_insensitive_asset_path_collisions() {
 #[test]
 fn semantic_validation_rejects_inconsistent_window_minimums() {
     let store = store();
-    let mut project = sample_project();
-    project["window"]["minWidth"] = json!(1200);
-
+    let mut min_width = sample_project();
+    min_width["window"]["minWidth"] = json!(1200);
     expect_validation_code(
-        store.validator().validate(&project).unwrap_err(),
+        store.validator().validate(&min_width).unwrap_err(),
+        "INVALID_WINDOW",
+    );
+
+    let mut min_height = sample_project();
+    min_height["window"]["minHeight"] = json!(900);
+    expect_validation_code(
+        store.validator().validate(&min_height).unwrap_err(),
         "INVALID_WINDOW",
     );
 }
