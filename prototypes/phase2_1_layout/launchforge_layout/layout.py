@@ -15,17 +15,20 @@ _EPSILON = 1e-9
 
 
 class Axis(str, Enum):
+    """Main layout axis for stack placement."""
     HORIZONTAL = "horizontal"
     VERTICAL = "vertical"
 
 
 class SizeMode(str, Enum):
+    """Supported dimension sizing strategies."""
     FIXED = "fixed"
     FIT = "fit"
     FILL = "fill"
 
 
 class Alignment(str, Enum):
+    """Logical alignment relative to a component's parent."""
     START = "start"
     CENTER = "center"
     END = "end"
@@ -33,6 +36,7 @@ class Alignment(str, Enum):
 
 
 class MainDistribution(str, Enum):
+    """Distribution of unused space along a stack's main axis."""
     START = "start"
     CENTER = "center"
     END = "end"
@@ -40,28 +44,33 @@ class MainDistribution(str, Enum):
 
 
 class Direction(str, Enum):
+    """Inline writing direction used by direction-aware layout."""
     LTR = "ltr"
     RTL = "rtl"
 
 
 def _finite_non_negative(name: str, value: float) -> None:
+    """Reject dimensions and weights that are negative or non-finite."""
     if not isfinite(value) or value < 0:
         raise ValueError(f"{name} must be a finite, non-negative number")
 
 
 def _finite(name: str, value: float) -> None:
+    """Reject coordinates that cannot be represented as finite values."""
     if not isfinite(value):
         raise ValueError(f"{name} must be finite")
 
 
 @dataclass(frozen=True, slots=True)
 class Rect:
+    """Immutable rectangle measured in logical UI units."""
     x: float
     y: float
     width: float
     height: float
 
     def __post_init__(self) -> None:
+        """Validate all rectangle coordinates and dimensions."""
         _finite("x", self.x)
         _finite("y", self.y)
         _finite_non_negative("width", self.width)
@@ -69,27 +78,32 @@ class Rect:
 
     @property
     def right(self) -> float:
+        """Return the right edge of this rectangle."""
         return self.x + self.width
 
     @property
     def bottom(self) -> float:
+        """Return the bottom edge of this rectangle."""
         return self.y + self.height
 
 
 @dataclass(frozen=True, slots=True)
 class Insets:
+    """Immutable padding values for the four rectangle edges."""
     top: float = 0.0
     right: float = 0.0
     bottom: float = 0.0
     left: float = 0.0
 
     def __post_init__(self) -> None:
+        """Reject negative or non-finite padding values."""
         for name in ("top", "right", "bottom", "left"):
             _finite_non_negative(name, getattr(self, name))
 
 
 @dataclass(frozen=True, slots=True)
 class AxisSpec:
+    """Sizing mode, weight or fixed value, and optional bounds."""
     """A dimension request with optional minimum and maximum bounds.
 
     For FILL, value is the positive flex weight. For FIXED it is the requested
@@ -102,6 +116,7 @@ class AxisSpec:
     maximum: float | None = None
 
     def __post_init__(self) -> None:
+        """Validate mode, sizing value, and min/max bounds."""
         if not isinstance(self.mode, SizeMode):
             raise ValueError("mode must be a supported SizeMode")
         _finite_non_negative("value", self.value)
@@ -117,23 +132,27 @@ class AxisSpec:
     def fixed(
         cls, value: float, *, minimum: float = 0.0, maximum: float | None = None
     ) -> "AxisSpec":
+        """Create a fixed logical size request."""
         return cls(SizeMode.FIXED, value, minimum, maximum)
 
     @classmethod
     def fit(
         cls, *, minimum: float = 0.0, maximum: float | None = None
     ) -> "AxisSpec":
+        """Create a content-measured size request."""
         return cls(SizeMode.FIT, 0.0, minimum, maximum)
 
     @classmethod
     def fill(
         cls, weight: float = 1.0, *, minimum: float = 0.0, maximum: float | None = None
     ) -> "AxisSpec":
+        """Create a weighted fill request with optional bounds."""
         return cls(SizeMode.FILL, weight, minimum, maximum)
 
 
 @dataclass(frozen=True, slots=True)
 class LayoutChild:
+    """A keyed layout item with width, height, and intrinsic measurements."""
     key: str
     width: AxisSpec
     height: AxisSpec
@@ -141,6 +160,7 @@ class LayoutChild:
     intrinsic_height: float = 0.0
 
     def __post_init__(self) -> None:
+        """Validate stable local key, sizing specs, and intrinsic dimensions."""
         if not self.key:
             raise ValueError("child key must not be empty")
         if not isinstance(self.width, AxisSpec) or not isinstance(self.height, AxisSpec):
@@ -151,23 +171,27 @@ class LayoutChild:
 
 @dataclass(frozen=True, slots=True)
 class OverlayChild(LayoutChild):
+    """A child independently aligned within an overlay parent."""
     align_x: Alignment = Alignment.CENTER
     align_y: Alignment = Alignment.CENTER
 
 
 @dataclass(frozen=True, slots=True)
 class PlacedItem:
+    """A layout child's key and resolved logical bounds."""
     key: str
     bounds: Rect
 
 
 @dataclass(frozen=True, slots=True)
 class LayoutResult:
+    """Resolved child placements and per-axis overflow flags."""
     items: tuple[PlacedItem, ...]
     overflow_x: bool = False
     overflow_y: bool = False
 
     def by_key(self, key: str) -> Rect:
+        """Find the resolved bounds for a child key."""
         for item in self.items:
             if item.key == key:
                 return item.bounds
@@ -175,6 +199,7 @@ class LayoutResult:
 
 
 def _clamp(value: float, spec: AxisSpec) -> float:
+    """Constrain a requested size to the spec's minimum and maximum."""
     value = max(value, spec.minimum)
     if spec.maximum is not None:
         value = min(value, spec.maximum)
@@ -182,6 +207,7 @@ def _clamp(value: float, spec: AxisSpec) -> float:
 
 
 def _natural_size(spec: AxisSpec, intrinsic: float) -> float:
+    """Resolve fixed or fit-content sizing before flex allocation."""
     if spec.mode is SizeMode.FIXED:
         requested = spec.value
     elif spec.mode is SizeMode.FIT:
@@ -192,11 +218,18 @@ def _natural_size(spec: AxisSpec, intrinsic: float) -> float:
 
 
 def _allocate_fill(specs: Sequence[AxisSpec], available: float) -> list[float]:
-    """Allocate by flex weight, freezing constrained children and redistributing."""
+    """Allocate weighted space using aggregate min/max violation.
 
+    Only the bound family that drives the aggregate violation is frozen in an
+    iteration. The remaining active children are then redistributed the
+    remaining space by weight. When minimum constraints cannot fit, they are
+    preserved and the caller reports overflow.
+    """
+
+    _finite_non_negative("available", available)
     allocations = [0.0] * len(specs)
     active = set(range(len(specs)))
-    remaining = max(0.0, available)
+    remaining = available
 
     while active:
         total_weight = sum(specs[index].value for index in active)
@@ -204,29 +237,46 @@ def _allocate_fill(specs: Sequence[AxisSpec], available: float) -> list[float]:
             index: remaining * specs[index].value / total_weight
             for index in active
         }
-        clamped: dict[int, float] = {}
+        min_frozen: dict[int, float] = {}
+        max_frozen: dict[int, float] = {}
         for index, share in proposed.items():
             spec = specs[index]
             if share < spec.minimum - _EPSILON:
-                clamped[index] = spec.minimum
+                min_frozen[index] = spec.minimum
             elif spec.maximum is not None and share > spec.maximum + _EPSILON:
-                clamped[index] = spec.maximum
+                max_frozen[index] = spec.maximum
 
-        if not clamped:
+        if not min_frozen and not max_frozen:
             for index, share in proposed.items():
                 allocations[index] = share
             break
+
+        violation = sum(
+            value - proposed[index] for index, value in min_frozen.items()
+        ) + sum(
+            value - proposed[index] for index, value in max_frozen.items()
+        )
+        if violation > _EPSILON:
+            clamped = min_frozen
+        elif violation < -_EPSILON:
+            clamped = max_frozen
+        else:
+            clamped = {**min_frozen, **max_frozen}
 
         for index, value in clamped.items():
             allocations[index] = value
             active.remove(index)
             remaining -= value
+
+        # A negative remainder is possible only when minimums cannot fit.
+        # Preserve those minimums; overflow is reported by layout_stack.
         remaining = max(0.0, remaining)
 
     return allocations
 
 
 def _inner_rect(bounds: Rect, padding: Insets) -> Rect:
+    """Return the parent content box after applying padding."""
     return Rect(
         bounds.x + padding.left,
         bounds.y + padding.top,
@@ -243,6 +293,7 @@ def _cross_position(
     alignment: Alignment,
     direction: Direction,
 ) -> tuple[float, float]:
+    """Resolve cross-axis origin while respecting logical start in RTL."""
     if axis is Axis.HORIZONTAL:
         origin, available = inner.y, inner.height
         start_at_end = False
@@ -338,10 +389,10 @@ def layout_stack(
     ):
         if cross_spec.mode is SizeMode.FILL or align_items is Alignment.STRETCH:
             cross_size = _clamp(available_cross, cross_spec)
-            cross_alignment = Alignment.STRETCH
         else:
             cross_size = _natural_size(cross_spec, intrinsic_cross)
-            cross_alignment = align_items
+        # Keep the requested alignment when a FILL child is capped by max.
+        cross_alignment = align_items
 
         cross_origin, final_cross_size = _cross_position(
             inner,
@@ -381,6 +432,7 @@ def _overlay_axis(
     *,
     reverse_start: bool,
 ) -> tuple[float, float]:
+    """Resolve one overlay dimension and its aligned origin."""
     if spec.mode is SizeMode.FILL or alignment is Alignment.STRETCH:
         size = _clamp(available, spec)
     else:
