@@ -83,7 +83,7 @@ Required behavior:
 
 - **Signature authenticity:** verify the correct role's threshold of distinct trusted key IDs, using only algorithms and keys authorized by the trusted Root metadata. Duplicate signatures from one key do not satisfy multiple threshold slots.
 - **Root continuity:** bootstrap from the package-provisioned root and process every consecutive root version. Each new root is signed by both the prior and new root thresholds.
-- **Expiry/freeze resistance:** reject expired metadata against a fixed update-cycle start time. Do not reset that time to extend metadata validity during one cycle. Timestamp expiry and publisher refresh cadence must make repository freeze detectable.
+- **Expiry/freeze resistance:** reject expired Timestamp, Snapshot and Targets metadata against the fixed update-cycle start time; never reset that time to extend validity during one cycle. Root follows TUF's special rotation workflow: the out-of-band trusted Root's expiry is ignored while attempting rotation, and expiry checks for intermediate Root versions are deferred until the consecutive-root walk finishes. Check the final trusted Root against the fixed update-cycle start time; abort and report a possible freeze if that final Root is expired. Timestamp expiry and publisher refresh cadence make repository freeze detectable.
 - **Metadata rollback resistance:** persist trusted role metadata/version state. Reject lower versions; same-version metadata with changed content is not a valid update. Do not reset trusted versions just because the network source or channel changes.
 - **Fast-forward recovery:** handle role-key rotation and repository compromise/recovery exactly as the chosen TUF implementation specifies; do not simply clear counters after verification failure.
 - **Mix-and-match resistance:** verify Snapshot bindings to Targets metadata and all target metadata against the accepted Snapshot. Do not combine files from different repository states.
@@ -102,11 +102,14 @@ The launcher application version is distinct from game-content release versions 
 
 - Use SemVer for publisher-facing launcher application releases.
 - Use TUF integer versions for each metadata role; never reuse the application version as a metadata version.
-- Store the installed launcher version and highest accepted release version for each (product, channel, platform, architecture) identity.
+- Store the installed launcher version and highest accepted release version for each (product, channel, platform, architecture) identity, together with the exact trusted Targets target identifier/path, length and SHA-256 digest for that accepted release.
 - Reject any target whose product, channel, architecture, or compatibility identity does not match the locally pinned installation policy.
+- Bind each accepted application version immutably to its exact target length and digest (and retain the target identifier/path for audit). If later, otherwise-valid Targets metadata reuses an already accepted product/channel/platform/version identity with a different length or digest, reject it; a higher Targets metadata version or fresh valid signatures do not authorize changing the bytes for an existing application release identity.
 - Reject a target release lower than the currently installed release or the highest accepted release for that identity, even if its signatures and hashes are valid.
 - Stable must not accept beta/preview by lexical comparison. Prerelease promotion is explicit publisher policy, not an implicit channel precedence.
 - A channel migration or rollback recovery must require an explicit authenticated policy/action and must not clear metadata version state as a side effect.
+
+Persist the accepted version-to-target binding atomically with the highest-accepted-version state, before allowing the release to become eligible for installation. Corrupt or missing binding state must fail closed and use the documented out-of-band re-bootstrap path; never reconstruct historical bindings from the current remote repository.
 
 The local state model must acknowledge its threat boundary: local administrators or the same user controlling a per-user installation may be able to restore or replace local files. DPAPI/ACL protection helps protect state from other principals and accidental edits but does not create a hardware monotonic counter against the local owner. The threat model must state whether local-administrator rollback is in scope and whether TPM-backed anti-rollback is required/available. Do not overclaim protection from deleting/restoring local state.
 
