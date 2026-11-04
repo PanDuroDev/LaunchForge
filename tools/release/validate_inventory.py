@@ -178,8 +178,10 @@ def _hash_file(path: Path, context: str) -> tuple[int, str]:
 
 
 def _validate_signing(
-    value: Any, context: str, *, allow_unsigned: bool, channel: str,
+    value: Any, context: str, *, allow_unsigned: bool, channel: str, package_type: str,
 ) -> None:
+    if channel == "stable" and allow_unsigned:
+        raise ValidationError("--allow-unsigned must not be used for stable releases")
     signing = _require_object(value, context)
     _require_exact_keys(signing, _SIGNING_KEYS, context)
     status = signing["status"]
@@ -209,6 +211,8 @@ def _validate_signing(
         _require_string(reason, f"{context}.reason", maximum=512)
         if channel == "stable":
             raise ValidationError("stable releases must contain only signed artifacts")
+        if package_type == "installer" and status == "not-applicable":
+            raise ValidationError("installer artifacts must not use the not-applicable signing status")
         if status == "unsigned" and not allow_unsigned:
             raise ValidationError(
                 f"{context} is unsigned; pass --allow-unsigned only for a non-production preview build"
@@ -318,7 +322,7 @@ def validate_inventory(
 
         _validate_signing(
             artifact["signing"], f"{context}.signing",
-            allow_unsigned=allow_unsigned, channel=channel,
+            allow_unsigned=allow_unsigned, channel=channel, package_type=package_type,
         )
         artifact_path = _check_no_links(root, parts, f"artifact {relative_path}")
         actual_size, actual_hash = _hash_file(artifact_path, f"artifact {relative_path}")
