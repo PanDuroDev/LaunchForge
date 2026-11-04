@@ -204,11 +204,13 @@ Do not run these tests against guessed interfaces. The implementation sequence i
 
 ### Current repository findings (2026-11-04)
 
-- `main` has no application source, project schema, Runtime, renderer, migration implementation, or CI test harness.
+- `main` now contains the Phase 6 catalog/metadata validator and the merged Phase 2.1 Python layout reference with multi-version CI. It still has no production Studio application, exported Runtime, production renderer integration, migration engine, or Windows package lifecycle.
 - PR #9 is a Phase 1 readiness document, not implementation; it remains open and unmerged.
-- PR #10 is a Phase 2 authoring specification, not implementation; it remains open and unmerged.
-- PR #12 proposes a Phase 4.1 distribution manifest and Python downloader prototype. Its contract is explicitly proposed/prototype-only and not approved for Runtime integration. Its PR reports 28 passing tests, but the end-to-end network transport is mocked and it does not implement install transactions, Runtime APIs, or recovery. The PR remains a draft and unmerged.
-- The Phase 5 work branch contains a publisher artifact-inventory JSON Schema only. Its description explicitly says it is for publisher release QA, not a launcher updater manifest or trust statement. It is not merged and does not establish release readiness.
+- PR #10 is a Phase 2 authoring specification, not production Studio implementation; it remains open and unmerged.
+- PR #13's Phase 2.1 layout reference was merged into main. Its Python CI passed on 3.10–3.13, but it remains a reference prototype, not a production renderer/Studio integration.
+- PR #12 proposes a Phase 4.1 distribution manifest and Python downloader prototype. Its contract is proposed/prototype-only and not approved for Runtime integration. Its PR reports 28 passing tests, but transport is mocked and install transactions, Runtime APIs, and recovery are not implemented. The PR remains open and unmerged.
+- PR #17 adds POSIX-only install/update/repair/verify/recovery and lifecycle reference code; it explicitly has no Windows backend or native Runtime integration.
+- PR #14 adds publisher artifact-inventory validation, but the inventory is explicitly not a launcher updater manifest or trust statement. PR #15 proposes TUF updater trust/recovery but does not implement an updater. PR #18 adds diagnostics/security/release-gate materials and explicitly records production **FAIL / NO-GO** until Runtime/package, Windows baseline, updater, clean install/recovery and Runtime diagnostics integration are proven.
 
 Therefore all executable conformance cases in this document are currently **BLOCKED**. This is an accurate result, not a failure of the proposed test design.
 
@@ -259,3 +261,12 @@ A passing workflow demonstrates catalog metadata/test-harness health only. It is
 The current candidate contract and evidence mapping is maintained in `docs/phase6/CONTRACT_TRACEABILITY.md`. Consult it before translating a planned case into an executable adapter. It distinguishes PR-branch proposals from accepted interfaces, maps Phase 6 case groups to Phase 0/1/2/4/5 candidate artifacts, and records coverage gaps that must be reconciled after the integration owner approves those artifacts.
 
 The traceability map is provisional. Do not encode candidate schema/API details into the stable conformance catalog or mark tests implemented until the referenced upstream contract is accepted.
+
+## 10. Latest prerequisite blockers (2026-11-04)
+
+- Phase 0 PR #16's first Tauri run [#41919048099](https://github.com/PanDuroDev/LaunchForge/actions/runs/41919048099) failed because `poc/src-tauri/icons/icon.ico` was missing. That was fixed: the subsequent Windows run [#41919850333](https://github.com/PanDuroDev/LaunchForge/actions/runs/41919850333) passed contract/renderer tests, renderer export, Rust lockfile generation/build, host smoke test, portable packaging and artifact upload. However, the latest head [#41920824672](https://github.com/PanDuroDev/LaunchForge/actions/runs/41920824672) fails 12/13 tests at `poc/tests/phase0.test.mjs:53`: the ICO negative fixture truncates the last file byte, which may be outside declared image payload ranges. Correct the fixture and rerun. The current Phase 0 tree still has no tracked `poc/src-tauri/Cargo.lock`; commit/review it. Clean-machine/WebView2, DPI/accessibility and performance evidence remain outstanding.
+- Phase 4 PR #17 is POSIX-only and explicitly has no Windows backend. Its 40 local tests do not demonstrate Windows/NTFS path safety, reparse-point handling, real host process launch or power-loss recovery.
+- Phase 0's candidate JSON Schema accepts uppercase and lowercase UUIDv4 hex, while the semantic validator regex accepts lowercase only. The integration owner must choose and test one canonical rule before Phase 1 freezes the schema.
+- Phase 5 PR #18 records **FAIL / NO-GO** because the accepted Runtime/package, supported Windows baseline, updater, clean-machine install/recovery evidence and Runtime diagnostics integration are absent. PRs #14 and #15 remain unmerged QA/design contributions, not a production updater.
+
+These failures and boundaries keep executable Phase 6 product conformance, 6.2 expansion selection, and 6.3 support blocked. Do not lower the gate because isolated test suites pass on another OS or a reference prototype passes.
