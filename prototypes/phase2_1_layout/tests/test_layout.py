@@ -12,6 +12,7 @@ from launchforge_layout import (
     MainDistribution,
     OverlayChild,
     Rect,
+    hit_test,
     layout_overlay,
     layout_stack,
 )
@@ -338,6 +339,46 @@ class OverlayLayoutTests(unittest.TestCase):
             padding=Insets(5, 10, 15, 20),
         )
         self.assertEqual(result.by_key("background"), Rect(20, 5, 70, 60))
+
+    def test_hit_test_returns_topmost_interactive_overlay_child(self):
+        """Verify the later overlapping interactive sibling receives the hit."""
+        result = layout_overlay(
+            Rect(0, 0, 100, 100),
+            [
+                OverlayChild("lower", AxisSpec.fill(), AxisSpec.fill()),
+                OverlayChild("upper", AxisSpec.fill(), AxisSpec.fill()),
+            ],
+        )
+        self.assertEqual(
+            hit_test(result, 50, 50, interactive_keys={"lower", "upper"}),
+            "upper",
+        )
+
+    def test_hit_test_passes_through_non_interactive_top_overlay(self):
+        """Verify a non-interactive top sibling does not block lower controls."""
+        result = layout_overlay(
+            Rect(0, 0, 100, 100),
+            [
+                OverlayChild("button", AxisSpec.fill(), AxisSpec.fill()),
+                OverlayChild("decoration", AxisSpec.fill(), AxisSpec.fill()),
+            ],
+        )
+        self.assertEqual(
+            hit_test(result, 50, 50, interactive_keys={"button"}),
+            "button",
+        )
+
+    def test_hit_test_uses_half_open_bounds_and_returns_none_outside(self):
+        """Verify right/bottom edges are excluded and misses return None."""
+        result = layout_overlay(
+            Rect(0, 0, 100, 100),
+            [OverlayChild("control", AxisSpec.fill(), AxisSpec.fill())],
+        )
+        self.assertEqual(hit_test(result, 0, 0, interactive_keys={"control"}), "control")
+        self.assertIsNone(hit_test(result, 100, 50, interactive_keys={"control"}))
+        self.assertIsNone(hit_test(result, 50, 100, interactive_keys={"control"}))
+        self.assertIsNone(hit_test(result, 120, 120, interactive_keys={"control"}))
+        self.assertIsNone(hit_test(result, 50, 50, interactive_keys=set()))
 
     def test_overlay_reports_overflow(self):
         """Verify overlay children outside the content bounds trigger overflow."""
