@@ -6,7 +6,7 @@ This Windows-first release procedure defines publisher-side checks without selec
 
 ## Trust boundary
 
-\`publisher-artifacts.v1.json\` is a **publisher-side artifact inventory** used by the release job to validate local files before publishing them. It is not downloaded by launcher clients, is not a signed update manifest, and must never authorize a client update.
+`publisher-artifacts.v1.json` is a **publisher-side artifact inventory** used by the release job to validate local files before publishing them. It is not downloaded by launcher clients, is not a signed update manifest, and must never authorize a client update.
 
 A SHA-256 digest detects byte mismatch only when the expected digest is already trusted. An attacker who can replace both artifact and digest can produce a matching pair. Release authenticity depends on publisher signing and provenance. The Phase 5.2 updater must define its own approved signed metadata, client trust anchor, artifact binding, freshness/replay policy, monotonic version policy, and key lifecycle. None of those properties is implied by this inventory.
 
@@ -14,11 +14,11 @@ Launcher application releases and game-content releases are separate products an
 
 ## Versioning and channels
 
-Use Semantic Versioning (\`MAJOR.MINOR.PATCH\`) and immutable release identities. Never replace an already-published artifact under the same product/version/channel identity.
+Use Semantic Versioning (`MAJOR.MINOR.PATCH`) and immutable release identities. Never replace an already-published artifact under the same product/version/channel identity.
 
-- \`stable\`: SemVer without a prerelease suffix; unsigned artifacts are forbidden.
-- \`beta\`: SemVer prerelease, for example \`2.1.0-beta.2\`.
-- \`preview\`: SemVer prerelease, for example \`2.1.0-preview.4\`.
+- `stable`: SemVer without a prerelease suffix; unsigned artifacts are forbidden.
+- `beta`: SemVer prerelease, for example `2.1.0-beta.2`.
+- `preview`: SemVer prerelease, for example `2.1.0-preview.4`.
 
 Channels are publisher labels, not security boundaries. A client must not switch channels or accept a downgrade based only on the channel name. Stable promotion must be explicit, preserve the exact tested bytes, and compare against the highest previously published stable version. The inventory validator does not query release history or enforce monotonic promotion.
 
@@ -30,25 +30,27 @@ It records product/version/channel, source revision, CI workflow/run, toolchain 
 
 The validator uses only the Python standard library:
 
-\`\`\`powershell
+```powershell
 python tools/release/validate_inventory.py .\dist
-\`\`\`
+```
 
 Unsigned local preview builds require an explicit override:
 
-\`\`\`powershell
+```powershell
 python tools/release/validate_inventory.py .\dist --allow-unsigned
-\`\`\`
+```
 
-The override is rejected for stable releases and must never appear in a production publishing job. The validator checks structure, paths, lengths and hashes. It does **not** verify Authenticode signatures, certificate chains, GitHub attestations, SBOMs or updater trust. A \`signed\` JSON value is an assertion, not cryptographic proof.
+The override is rejected for stable releases and must never appear in a production publishing job. The validator checks structure, paths, lengths and hashes. It does **not** verify Authenticode signatures, certificate chains, GitHub attestations, SBOMs or updater trust. A `signed` JSON value is an assertion, not cryptographic proof.
+
+Run it in an isolated release workspace that the validator's process exclusively controls. The filesystem checks reject links/reparse points observed during validation; this local QA tool is not a defense against a concurrent process that can mutate the release directory while it is being checked.
 
 ## Required release sequence
 
 1. **Controlled build:** use a clean checkout at an immutable commit. Pin the Windows runner image, SDKs, compiler/linker and packaging-tool versions, and dependency lockfiles. Use least-privilege CI permissions; do not expose signing credentials to pull-request builds.
 2. **Dependency inventory:** generate an SPDX or CycloneDX SBOM for the actual release output. Inventory direct and transitive dependencies, review licenses, scan known vulnerabilities, and retain the SBOM. Critical/high findings block release unless a named owner records explicit, time-bounded acceptance.
 3. **Build and test:** build the selected package deterministically where practical. Run tests, inspect package contents, scan resolved inputs and final output for secrets, and confirm publisher credentials are absent. Do not claim reproducibility until independent clean builds have been compared and differences explained.
-4. **Sign before hashing:** sign Windows executables/installers using a publisher-controlled certificate in a managed signing service or hardware-backed key store. Never store private signing keys in source control, project files, launcher packages, plain CI variables or diagnostics. Apply a trusted timestamp. Verify final signatures and publisher identity on the release runner (for example, \`signtool verify /pa /all /v <file>\` plus an explicit certificate allowlist). Runnable binaries inside an unsigned archive still require signature checks.
-5. **Create final inventory:** after signing, compute SHA-256 and exact byte length for the bytes that will be uploaded. Write \`publisher-artifacts.v1.json\` with immutable source/build metadata and explicit signing status.
+4. **Sign before hashing:** sign Windows executables/installers using a publisher-controlled certificate in a managed signing service or hardware-backed key store. Never store private signing keys in source control, project files, launcher packages, plain CI variables or diagnostics. Apply a trusted timestamp. Verify final signatures and publisher identity on the release runner (for example, `signtool verify /pa /all /v <file>` plus an explicit certificate allowlist). Runnable binaries inside an unsigned archive still require signature checks.
+5. **Create final inventory:** after signing, compute SHA-256 and exact byte length for the bytes that will be uploaded. Write `publisher-artifacts.v1.json` with immutable source/build metadata and explicit signing status.
 6. **Validate and attest:** run the inventory validator, signature checks, SBOM checks and repository provenance/attestation workflow. Retain sanitized evidence. The inventory's signing assertion does not replace cryptographic verification.
 7. **Publish immutable assets:** publish under a versioned tag/release. Never overwrite assets in place. Record signer identity and signing status; never publish secrets, key material or raw environment variables.
 8. **Verify after upload:** download every published asset in a clean job, compare size and SHA-256, and re-verify signatures and attestations. Stop promotion and quarantine/revoke a release if any check fails.
