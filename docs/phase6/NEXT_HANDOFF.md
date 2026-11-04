@@ -6,7 +6,7 @@
 
 ## Why Phase 6 cannot advance to product conformance yet
 
-The Phase 6 catalog workflow is green, but it validates only the 36-case catalog, its metadata validator, 13 unit tests and Python compilation. It does not validate LaunchForge Studio, exported Runtime, project migration, packaging, game installation or launcher updates.
+The Phase 6 catalog workflow is green, but it validates only the 38-case catalog, its metadata validator, 14 unit tests and Python compilation. It does not validate LaunchForge Studio, exported Runtime, project migration, packaging, game installation or launcher updates.
 
 The current upstream evidence has explicit blockers:
 
@@ -24,7 +24,7 @@ These actions belong to the named upstream owners/integration owner. Phase 6 sho
 
 | Order | Owner / prerequisite | Required exit evidence | Phase 6 action after acceptance |
 |---|---|---|---|
-| 1 | Phase 0 owner — PR #16 | Correct the ICO negative fixture so it truncates within a declared image payload; rerun contract tests, renderer export, Tauri host build, standalone smoke test, portable package build/validation and artifact upload. Commit/review `Cargo.lock`; align UUID schema/semantic-validator casing; then record fresh-user Windows VM, WebView2 preview/export, DPI/accessibility and measurement evidence; obtain explicit architecture approval. | Freeze the exact supported contract versions and map the 36 case IDs to approved schema/capability/diagnostic identifiers. |
+| 1 | Phase 0 owner — PR #16 | Correct the ICO negative fixture so it truncates within a declared image payload; rerun contract tests, renderer export, Tauri host build, standalone smoke test, portable package build/validation and artifact upload. Commit/review `Cargo.lock`; align UUID schema/semantic-validator casing; then record fresh-user Windows VM, WebView2 preview/export, DPI/accessibility and measurement evidence; obtain explicit architecture approval. | Freeze the exact supported contract versions and map the 38 case IDs to approved schema/capability/diagnostic identifiers. |
 | 2 | Phase 1 owner — Issue #3 / PR #9 | Implement project create/open/save and schema validation; establish versioned fixtures, stable IDs/assets and a real Studio/Runtime/renderer/build boundary; pass preview/export and clean-Windows first-user journey. | Implement Phase 6 compatibility adapters for supported project/runtime tuples, then make format, capability and parity cases executable. |
 | 3 | Phase 2/3 owners — Issues #4/#5 | Accept layout/assets/RTL/localization semantics and the data/action/credential contracts actually included in supported projects; demonstrate existing-project preservation. | Implement the corresponding layout, accessibility, data/action and migration fixtures/adapters. |
 | 4 | Phase 4 owner — Issue #6 / PRs #12/#17 | Approve the manifest and lifecycle boundary; implement a Windows-safe filesystem transaction backend, NTFS reparse-point protections and native Runtime integration; pass Windows interruption, recovery, integrity and launch tests. | Activate the game-delivery and filesystem/security cases only against accepted Windows behavior. |
@@ -38,6 +38,7 @@ These actions belong to the named upstream owners/integration owner. Phase 6 sho
 - Map every catalog planning dependency to the accepted upstream contract/version. Do not silently rename approved identifiers.
 - Add executable adapters to the actual schema validator, migration engine, renderer capability registry, Studio preview, exported Runtime, build pipeline and package/updater paths.
 - Keep all currently planned cases marked `planned` until the actual behavior has a repeatable test and retained result.
+- Resolve the two new project-format edge cases (`LF-COMPAT-007` UUID schema/validator agreement and `LF-COMPAT-008` application-icon reference/ICO payload validation) only after Phase 0/1 approve the canonical rules and provide runnable fixtures.
 - Run positive, negative, migration, parity, security, recovery and performance cases using the same immutable fixture revision across applicable product surfaces.
 - Publish separate support results for Studio and exported Launcher. A CI green status on this documentation/catalog PR is not a product support result.
 
