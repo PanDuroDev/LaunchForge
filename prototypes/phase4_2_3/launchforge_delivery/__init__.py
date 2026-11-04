@@ -10,12 +10,12 @@ from .transaction import (
     TransactionError,
     UnsupportedPlatformError,
 )
-from .lifecycle import GameLifecycleService, GameSnapshot, GameState, LaunchConfig, LauncherAdapter, VerifiedArtifactProvider
+from .lifecycle import GameLifecycleService, GameSnapshot, GameState, LauncherAdapter, VerifiedArtifactProvider
 from .manifest_adapter import BoundedDownloaderProvider, artifacts_from_verified_manifest
 
 __all__ = [
     "Artifact", "FileRecord", "InstallResult", "IntegrityError", "RecoveryError",
     "RecoveryReport", "TransactionEngine", "TransactionError", "UnsupportedPlatformError",
-    "GameLifecycleService", "GameSnapshot", "GameState", "LaunchConfig", "LauncherAdapter", "VerifiedArtifactProvider",
+    "GameLifecycleService", "GameSnapshot", "GameState", "LauncherAdapter", "VerifiedArtifactProvider",
     "artifacts_from_verified_manifest", "BoundedDownloaderProvider",
 ]

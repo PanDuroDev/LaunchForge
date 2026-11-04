@@ -42,18 +42,17 @@ class GameSnapshot:
     error_code: Optional[str] = None
 
 
-@dataclass(frozen=True)
-class LaunchConfig:
-    executable: str
-    arguments: tuple[str, ...] = ()
-
-
 @runtime_checkable
 class LauncherAdapter(Protocol):
-    """Narrow bridge implemented by the approved native Runtime host."""
+    """Narrow bridge matching the Phase 0 host boundary.
 
-    def launch(self, installation_root: Path, executable_relative: str, expected_sha256: str, arguments: tuple[str, ...]) -> object:
-        """Launch via handle-relative validation, without a shell, and return a process handle."""
+    The renderer/action supplies only a configured game ID. The native host
+    resolves the trusted executable and arguments from its own configuration,
+    validates its handle beneath the authorized install root, and launches it.
+    """
+
+    def launch_game(self, game_id: str) -> object:
+        """Resolve and launch the preconfigured game target; never accept a path or command."""
         ...
 
 
@@ -203,21 +202,14 @@ class GameLifecycleService:
             with self._lock:
                 self._busy = False
 
-    def launch(self, game_id: str, version: str, records: Iterable[FileRecord], config: LaunchConfig, adapter: LauncherAdapter) -> object:
+    def launch(self, game_id: str, version: str, records: Iterable[FileRecord], adapter: LauncherAdapter) -> object:
         expected = tuple(records)
         self._begin(game_id, version, sum(x.size for x in expected), GameState.VERIFYING)
         try:
             if not self.engine.verify(expected):
                 raise TransactionError("launch blocked: installed game failed integrity verification")
-            declared = {item.path: item for item in expected}
-            if not isinstance(config.executable, str) or config.executable not in declared:
-                raise TransactionError("launch executable is not declared in the verified manifest")
-            from .transaction import validate_relative_path
-            validate_relative_path(config.executable)
-            if not isinstance(config.arguments, (tuple, list)) or len(config.arguments) > 128 or any(not isinstance(a, str) or len(a) > 4096 or "\x00" in a for a in config.arguments):
-                raise TransactionError("launch arguments exceed the supported safe bounds")
-            self._set(GameState.LAUNCHING, message="Starting verified game executable")
-            handle = adapter.launch(self.engine.install_dir, config.executable, declared[config.executable].sha256, tuple(config.arguments))
+            self._set(GameState.LAUNCHING, message="Starting the configured game target")
+            handle = adapter.launch_game(game_id)
             if handle is None:
                 raise TransactionError("Runtime adapter did not return a process handle")
             self._process_handle = handle

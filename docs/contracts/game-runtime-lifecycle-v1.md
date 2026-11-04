@@ -1,67 +1,76 @@
-# Game lifecycle API v1 (prototype proposal)
+# Game installation transaction v1 (prototype proposal)
 
-> **Status: adapter proposal only.** No approved Phase 1 Runtime API, renderer event contract, or native process policy is present on main. This document is an integration proposal, not a shared contract change.
+> **Status: proposed prototype contract, not approved for production.** This branch demonstrates 4.2 without changing shared schemas or the missing Runtime API. The implementation is POSIX-only; Windows must use the approved native host contract and handle-relative Win32 operations before this can ship.
 
-## Operations
+## Scope
 
-The prototype exposes synchronous calls over an injected transaction engine:
+The transaction engine consumes a complete set of already downloaded artifacts. A caller is responsible for authenticating the publisher manifest and obtaining the artifacts through the bounded downloader. The engine treats each source file as untrusted again: it opens it without following symlinks, requires a regular file, copies it into a fresh staging directory, and recomputes its exact size and SHA-256 while copying.
 
-- install(game_id, version, verified_artifacts)
-- update(game_id, version, verified_artifacts)
-- repair(game_id, version, verified_artifacts)
-- apply_verified_manifest(action, verified_manifest, provider) to acquire signed-manifest files, report download progress/cancellation, map them into transaction artifacts, and clean temporary downloads after staging
-- verify(game_id, version, manifest_file_records) -> bool
-- launch(game_id, version, manifest_file_records, LaunchConfig, LauncherAdapter)
-- cancel() for an operation currently staging files
-- process_exited(exit_code) called by the native Runtime when a process handle exits
+The install directory is dedicated to immutable program files. Save games, settings, caches and mutable user/publisher data must be placed in a separate user-data directory. A release replaces the complete install directory; extra/unmanifested files are not preserved.
 
-Download/acquisition is separated behind VerifiedArtifactProvider. BoundedDownloaderProvider is a structural adapter for the Phase 4.1 downloader's download(entry, temp_dir, cancelled, progress) method; it refuses non-private or symlink-containing temp-directory paths, requires one returned artifact per declared manifest path, and removes its own temporary files after use. The manifest-to-artifact mapper does not authenticate the manifest: it accepts only an already signature-verified 4.1 result. The transaction engine independently reopens and rehashes every source while staging it.
+## Proposed inputs
 
-## State model
+    FileRecord(path: str, size: int, sha256: str)
+    Artifact(record: FileRecord, source: Path)
+    TransactionEngine(install_dir: absolute Path, limits...)
 
-idle -> downloading -> staging -> committing -> verifying -> installed -> ready -> launching -> running -> ready
+    engine.install(game_id, version, artifacts, progress, phase, cancelled)
+    engine.update(game_id, version, artifacts, progress, phase, cancelled)
+    engine.repair(game_id, version, artifacts, progress, phase, cancelled)
+    engine.verify(records) -> bool
+    engine.recover() -> RecoveryReport
 
-downloading is present only when apply_verified_manifest uses a provider; direct install/update/repair calls begin at staging.
+artifacts_from_verified_manifest(manifest, verified_downloads) is a structural adapter for the output shape proposed by Phase 4.1. It does not authenticate the manifest itself. The input manifest must already have passed signature verification and every download source must have passed the 4.1 downloader's size/hash checks. The transaction engine verifies source hashes again during the copy.
 
-Errors and cancellations are terminal for an operation: error or cancelled. The snapshot includes an operation ID, game ID, version, bytes complete/total, message and an error code. Byte progress is emitted while staging; the commit phase is intentionally non-cancellable because interruption safety is provided by the transaction journal/recovery algorithm.
+## Transaction algorithm
 
-Proposed error codes should be standardized with the Runtime owner: manifest_untrusted, download_failed, integrity_mismatch, storage_limit, insufficient_space, cancelled, transaction_recovery_required, install_path_unsafe, launch_not_declared, launch_blocked, and process_start_failed.
+1. Acquire an exclusive per-install OS file lock in the trusted parent directory.
+2. Recover any previously journaled operation before accepting new work.
+3. Validate all destination paths, case-fold/Unicode collisions, file/directory prefix collisions, file count, per-release total bytes and the free-space safety reserve.
+4. Create a random, private staging directory as a sibling of the target. The staging directory is on the same filesystem as the current install.
+5. Copy each source to a newly created destination using directory file descriptors and no-follow opens. Rehash every byte, fsync each file and the containing directories, and honor cancellation only during this stage.
+6. Publish and fsync a bounded transaction journal in the same parent directory.
+7. For an update/repair, atomically rename the old install to a unique backup sibling and fsync the parent directory.
+8. Atomically rename the staged release to the install name and fsync the parent directory.
+9. Inventory the complete installed tree; reject extra files, symlinks, special filesystem objects, and missing/changed files. Recompute every declared SHA-256.
+10. Delete the old backup using no-follow recursive deletion, then delete the journal and fsync the parent.
 
-## Launch boundary
+The stage, backup, target and journal are siblings, so the two directory swaps are same-filesystem renames in one parent directory. The previous install is never deleted before the replacement is verified. A normal exception invokes recovery synchronously. A process interruption leaves the journal and sibling directories for recovery on the next startup.
 
-LauncherAdapter.launch(installation_root, executable_relative, expected_sha256, arguments) is a protocol only. The prototype never invokes a shell or directly spawns a process.
+## Recovery cases
 
-The native Runtime implementation must:
+| Observed state | Recovery action |
+|---|---|
+| Old target present; stage present; no backup | Original was not moved; discard stage. |
+| Target absent; backup present; stage present | Restore backup to target; discard stage. |
+| Target present; backup present; stage absent | Verify target. Finalize by deleting backup if valid; otherwise move candidate aside and restore backup. |
+| Target present; no backup; no stage | Treat as a completed commit only if target exactly matches the journal. |
+| First install; target absent; stage present | Discard uncommitted stage. |
+| First install; target present; stage absent | Keep only if target exactly matches the journal; otherwise quarantine/remove the invalid new install. |
+| Backup exists without its journal | Fail closed and require manual recovery; never delete the only possible valid copy automatically. |
+| Journal, stage, backup or target has unexpected type/symlink/identity | Fail closed without following the link. |
 
-- accept only an executable path present in the verified release manifest;
-- reopen the executable handle-relatively under the trusted install root and reject symlinks/reparse points;
-- verify or otherwise bind the executable file handle to the expected SHA-256 immediately before process creation;
-- pass arguments as an argument vector, never through a shell string;
-- apply the approved process permissions, working-directory policy, environment policy and Windows Job Object/lifecycle behavior;
-- return a process handle and report process exit through process_exited.
+A test hook simulates interruption at each rename/verification boundary. These tests exercise recovery logic but are not a substitute for power-loss testing on supported Windows filesystems.
 
-The controller validates the executable is declared and bounds argument count/length/NULs, but the actual process creation and race-resistant launch check are intentionally left to the native host.
+## Filesystem security rules in the prototype
 
-## UI mapping proposal
+- Refuses platforms lacking O_NOFOLLOW, O_DIRECTORY, dir_fd operations, or flock; no path-based fallback is used.
+- Walks every component of the absolute parent path from /, opening each component as a directory with O_NOFOLLOW.
+- Requires the install parent to be owned by the current user and not group/world writable; lock file must be regular, private, and user-owned.
+- Opens source files without following symlinks and requires regular files.
+- Creates new destination files with O_EXCL|O_NOFOLLOW; directory creation/open is relative to trusted directory descriptors.
+- Checks Windows-invalid path names, device names, trailing dots/spaces, reserved ADS syntax, Unicode normalization, case-fold collisions, and path-prefix conflicts before writes.
+- Verifies the entire installed tree, not only declared files; symlinks, hard-linked files, extra files, and special objects cause verification failure.
+- Removes backups/stages without following symlinks or traversing another mounted filesystem.
+- Uses a size/count quota and checks available space plus a caller-configured safety reserve; write-time ENOSPC still fails before commit.
 
-| Runtime state | UI meaning | Typical action |
-|---|---|---|
-| downloading | Fetching and validating publisher artifacts | Cancel |
-| staging | Preparing verified game files | Cancel |
-| committing | Applying complete install/update | Disable cancellation; show indeterminate commit |
-| verifying | Checking installed files | Wait / retry on failure |
-| installed / ready | Playable installation | Play; Verify; Update |
-| launching | Starting game process | Disable duplicate Play |
-| running | Game process is active | Focus/close actions subject to Runtime policy |
-| cancelled | Operation stopped before commit | Install/Update again |
-| error | Operation failed with stable code and diagnostic message | Retry/Repair/Copy diagnostics |
+## Production blockers
 
-Pause/resume and background scheduling are not implemented. The current service is synchronous. A production host must define thread dispatch, operation scheduling and whether a game can launch while another game operation is active.
+1. Implement and review the Windows backend with handle-relative file operations, FILE_FLAG_OPEN_REPARSE_POINT, reparse-tag checks, safe rename/delete semantics and explicit ACL policy. Python POSIX tests do not prove Windows junction/reparse-point safety.
+2. Confirm the selected Runtime language/host and port this code; no shared language/toolchain is frozen in main.
+3. Approve install-root selection, parent ownership/ACL policy, user-data separation, lock behavior and multi-volume behavior.
+4. Approve journal schema/versioning, anti-rollback/current-version state, cleanup retention and manual recovery UX.
+5. Agree the Phase 4.1-to-4.2 adapter and error/progress types. The current manifest proposal has no signed executable-permission metadata; a portable target must decide whether an executable attribute belongs in the signed manifest.
+6. Perform Windows interruption/power-loss testing on the supported filesystem, including antivirus/file-lock behavior and concurrent processes.
 
-## Integration blockers
-
-- Phase 1 Runtime host/lifecycle/process contract and event threading policy.
-- Approved UI state/event registry.
-- Native Windows filesystem and process-launch implementation.
-- Accepted Phase 4.1 manifest/download result types and cancellation/progress interfaces.
-- Runtime version compatibility and error-code ownership.
+This contract is not permission to distribute managed game operations until the Windows implementation and adversarial gate pass.

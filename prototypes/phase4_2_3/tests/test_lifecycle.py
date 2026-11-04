@@ -9,7 +9,6 @@ from launchforge_delivery import (
     FileRecord,
     GameLifecycleService,
     GameState,
-    LaunchConfig,
     BoundedDownloaderProvider,
     TransactionEngine,
     TransactionError,
@@ -20,8 +19,8 @@ class FakeRuntime:
     def __init__(self):
         self.calls = []
 
-    def launch(self, installation_root, executable_relative, expected_sha256, arguments):
-        self.calls.append((installation_root, executable_relative, expected_sha256, arguments))
+    def launch_game(self, game_id):
+        self.calls.append((game_id,))
         return {"pid": 1234}
 
 
@@ -78,32 +77,26 @@ class LifecycleTests(unittest.TestCase):
     def test_launch_only_calls_runtime_for_verified_declared_executable(self):
         self.service.install("sample.game", "1", self.artifacts)
         runtime = FakeRuntime()
-        handle = self.service.launch("sample.game", "1", [self.record], LaunchConfig("bin/Game.exe", ("--safe", "value")), runtime)
+        handle = self.service.launch("sample.game", "1", [self.record], runtime)
         self.assertEqual(handle, {"pid": 1234})
         self.assertEqual(self.service.snapshot.state, GameState.RUNNING)
-        self.assertEqual(runtime.calls[0][1], "bin/Game.exe")
-        self.assertEqual(runtime.calls[0][2], self.record.sha256)
-        self.assertEqual(runtime.calls[0][3], ("--safe", "value"))
+        self.assertEqual(runtime.calls, [("sample.game",)])
         self.service.process_exited(0)
         self.assertEqual(self.service.snapshot.state, GameState.READY)
 
-    def test_launch_rejects_undeclared_executable_and_unsafe_arguments(self):
+    def test_launch_bridge_accepts_only_configured_game_id(self):
         self.service.install("sample.game", "1", self.artifacts)
         runtime = FakeRuntime()
-        with self.assertRaisesRegex(TransactionError, "not declared"):
-            self.service.launch("sample.game", "1", [self.record], LaunchConfig("cmd.exe"), runtime)
-        self.assertEqual(runtime.calls, [])
-        with self.assertRaisesRegex(TransactionError, "arguments"):
-            self.service.launch("sample.game", "1", [self.record], LaunchConfig("bin/Game.exe", ("bad\x00arg",)), runtime)
-        self.assertEqual(runtime.calls, [])
+        self.service.launch("sample.game", "1", [self.record], runtime)
+        self.assertEqual(runtime.calls, [("sample.game",)])
 
     def test_launch_rejects_runtime_adapter_without_process_handle(self):
         self.service.install("sample.game", "1", self.artifacts)
         class NoHandleRuntime:
-            def launch(self, *args):
+            def launch_game(self, game_id):
                 return None
         with self.assertRaisesRegex(TransactionError, "process handle"):
-            self.service.launch("sample.game", "1", [self.record], LaunchConfig("bin/Game.exe"), NoHandleRuntime())
+            self.service.launch("sample.game", "1", [self.record], NoHandleRuntime())
         self.assertEqual(self.service.snapshot.state, GameState.ERROR)
 
     def test_launch_blocked_if_installed_game_is_corrupt(self):
