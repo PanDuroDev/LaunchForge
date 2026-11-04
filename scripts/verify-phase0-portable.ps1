@@ -139,8 +139,11 @@ try {
         $unixType = ([int] $entry.ExternalAttributes -shr 16) -band 0xF000
         if ($unixType -eq 0xA000) { throw "The ZIP contains a symbolic link: $entryName" }
 
-        $expandedBytes += [long] $entry.Length
-        if ($expandedBytes -gt 536870912) { throw "The ZIP expands beyond the 512 MiB safety limit." }
+        $declaredEntryLength = [long] $entry.Length
+        if ($declaredEntryLength -gt 536870912 -or
+            ($expandedBytes + $declaredEntryLength) -gt 536870912) {
+            throw "The ZIP declares content beyond the 512 MiB safety limit."
+        }
 
         $relativePath = $portableName.Replace("/", [IO.Path]::DirectorySeparatorChar)
         $destination = [IO.Path]::GetFullPath([IO.Path]::Combine($extractRoot, $relativePath))
