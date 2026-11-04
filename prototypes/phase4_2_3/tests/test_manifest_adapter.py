@@ -21,7 +21,8 @@ class ManifestAdapterTests(unittest.TestCase):
     def test_downloader_provider_requires_private_directory_and_rejects_symlinked_path(self):
         """Verify that downloader provider requires private directory and rejects symlinked path behaves as expected."""
         with tempfile.TemporaryDirectory() as folder:
-            private = Path(folder) / "private"
+            base = Path(folder).resolve()
+            private = base / "private"
             private.mkdir(mode=0o700)
             provider = BoundedDownloaderProvider(object(), private)
             self.assertEqual(provider.temporary_directory, private)
