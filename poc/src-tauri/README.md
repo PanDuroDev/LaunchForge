@@ -14,4 +14,4 @@ Build after producing `poc/dist/`:
 cargo build --release --manifest-path .\poc\src-tauri\Cargo.toml
 ```
 
-The executable is written under `poc/src-tauri/target/release/`. The executable is a portable host spike, not a signed production launcher. WebView2 remains an OS/runtime prerequisite; silently bundled by this no-installer spike.
+The executable is written under `poc/src-tauri/target/release/`. The executable is a portable host spike, not a signed production launcher. The Tauri configuration explicitly embeds `icons/icon.ico`; the Windows preparation step stages the exact icon referenced by `window.iconAssetId` at this path. WebView2 remains an OS/runtime prerequisite and is not silently bundled by this no-installer spike.
