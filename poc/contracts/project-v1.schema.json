@@ -59,7 +59,7 @@
           },
           "path": {
             "type": "string",
-            "pattern": "^assets/[A-Za-z0-9][A-Za-z0-9._-]{0,119}$",
+            "pattern": "^assets/(?:[A-Za-z0-9]|[A-Za-z0-9][A-Za-z0-9._-]{0,118}[A-Za-z0-9_-])$",
             "maxLength": 180
           }
         },
@@ -78,7 +78,7 @@
             "then": {
               "properties": {
                 "path": {
-                  "pattern": "^assets/[A-Za-z0-9][A-Za-z0-9._-]{0,119}\\.ico$"
+                  "pattern": "^assets/(?:[A-Za-z0-9]|[A-Za-z0-9][A-Za-z0-9._-]{0,118}[A-Za-z0-9_-])\\.ico$"
                 }
               }
             }
@@ -143,14 +143,25 @@
       "minItems": 1,
       "maxItems": 1,
       "items": {
-        "$ref": "#/$defs/component"
+        "allOf": [
+          {
+            "$ref": "#/$defs/component"
+          },
+          {
+            "properties": {
+              "type": {
+                "const": "container"
+              }
+            }
+          }
+        ]
       }
     }
   },
   "$defs": {
     "uuid": {
       "type": "string",
-      "pattern": "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-4[0-9a-fA-F]{3}-[89aAbB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$"
+      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
     },
     "window": {
       "type": "object",
@@ -194,7 +205,8 @@
         "iconAssetId": {
           "$ref": "#/$defs/uuid"
         }
-      }
+      },
+      "$comment": "The semantic validator additionally enforces minWidth <= width and minHeight <= height. Draft 2020-12 cannot express sibling-property comparisons portably."
     },
     "theme": {
       "type": "object",

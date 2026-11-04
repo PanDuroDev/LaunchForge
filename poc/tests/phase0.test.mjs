@@ -50,7 +50,17 @@ test("application ICO contains every required Windows icon layer", async () => {
   const bytes = await readFile(path.join(root, asset.path));
   assert.equal(validateWindowsIcon(bytes), true);
   assert.deepEqual([...REQUIRED_WINDOWS_ICO_SIZES], [16, 24, 32, 48, 64, 256]);
-  assert.throws(() => validateWindowsIcon(bytes.subarray(0, bytes.length - 1)));
+  const count = bytes.readUInt16LE ? bytes.readUInt16LE(4) : (bytes[4] | (bytes[5] << 8));
+  let lastImageEnd = 0;
+  for (let index = 0; index < count; index += 1) {
+    const offset = 6 + index * 16;
+    const imageBytes = bytes.readUInt32LE ? bytes.readUInt32LE(offset + 8) :
+      (bytes[offset + 8] | (bytes[offset + 9] << 8) | (bytes[offset + 10] << 16) | (bytes[offset + 11] << 24)) >>> 0;
+    const imageOffset = bytes.readUInt32LE ? bytes.readUInt32LE(offset + 12) :
+      (bytes[offset + 12] | (bytes[offset + 13] << 8) | (bytes[offset + 14] << 16) | (bytes[offset + 15] << 24)) >>> 0;
+    lastImageEnd = Math.max(lastImageEnd, imageOffset + imageBytes);
+  }
+  assert.throws(() => validateWindowsIcon(bytes.subarray(0, lastImageEnd - 1)));
 });
 
 test("Tauri receives the exact application icon asset referenced by the project", async () => {
@@ -67,14 +77,42 @@ test("unknown schema versions fail closed", () => {
   expectCode(() => validateProject(invalid), "UNSUPPORTED_SCHEMA_VERSION");
 });
 
-test("IDs are stable UUIDv4 values and unique across project entities", () => {
+test("UUIDv4 identifiers are lowercase and unique across project entities", () => {
   const invalid = structuredClone(fixture);
   invalid.components[0].children[0].id = invalid.assets[0].id;
   expectCode(() => validateProject(invalid), "DUPLICATE_ID");
+
+  const uppercase = structuredClone(fixture);
+  uppercase.projectId = uppercase.projectId.toUpperCase();
+  expectCode(() => validateProject(uppercase), "INVALID_ID");
+});
+
+test("root must be a container and asset paths are unique case-insensitively", () => {
+  const wrongRoot = structuredClone(fixture);
+  wrongRoot.components[0] = structuredClone(wrongRoot.components[0].children[0]);
+  expectCode(() => validateProject(wrongRoot), "INVALID_ROOT_COMPONENT");
+
+  const duplicatePath = structuredClone(fixture);
+  duplicatePath.assets.push({
+    id: "dddddddd-dddd-4ddd-8ddd-dddddddddddd",
+    kind: "image",
+    path: "assets/SAMPLE-COVER.svg",
+  });
+  expectCode(() => validateProject(duplicatePath), "DUPLICATE_ASSET_PATH");
+});
+
+test("minimum window bounds cannot exceed the default dimensions", () => {
+  const tooWide = structuredClone(fixture);
+  tooWide.window.minWidth = tooWide.window.width + 1;
+  expectCode(() => validateProject(tooWide), "INVALID_NUMBER");
+
+  const tooTall = structuredClone(fixture);
+  tooTall.window.minHeight = tooTall.window.height + 1;
+  expectCode(() => validateProject(tooTall), "INVALID_NUMBER");
 });
 
 test("asset paths reject traversal, drive syntax, alternate streams, and device names", () => {
-  for (const value of ["../secret.txt", "assets/../../secret.txt", "C:/secret.txt", "assets/file:stream.svg", "assets/NUL.svg", "assets/%2e%2e.svg", "assets\\cover.svg"]) {
+  for (const value of ["../secret.txt", "assets/../../secret.txt", "C:/secret.txt", "assets/file:stream.svg", "assets/NUL.svg", "assets/%2e%2e.svg", "assets\\cover.svg", "assets/file."]) {
     expectCode(() => validateAssetPath(value), "UNSAFE_ASSET_PATH");
   }
   assert.equal(validateAssetPath("assets/cover-01.svg"), "assets/cover-01.svg");

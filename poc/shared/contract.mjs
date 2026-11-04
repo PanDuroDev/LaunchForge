@@ -4,7 +4,7 @@ export const MAX_PROJECT_BYTES = 1024 * 1024;
 export const MAX_COMPONENTS = 128;
 export const MAX_COMPONENT_DEPTH = 16;
 
-const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/;
 const HEX = /^#[0-9a-f]{6}$/i;
 const TOKENS = new Set(["surface", "text", "accent"]);
 const TYPES = new Set(["container", "text", "image", "button", "gameCard"]);
@@ -32,7 +32,7 @@ export function validateAssetPath(value, path = "$.assets[].path") {
   str(value, path, 180);
   if (!value.startsWith("assets/") || /[\\:%?]/.test(value)) fail("UNSAFE_ASSET_PATH", "Asset paths must be plain relative paths under assets/", path);
   const parts = value.split("/");
-  if (parts.length !== 2 || parts[0] !== "assets" || !/^[a-zA-Z0-9][a-zA-Z0-9._-]{0,119}$/.test(parts[1]) || RESERVED.test(parts[1])) fail("UNSAFE_ASSET_PATH", "Asset path must contain one portable filename under assets/", path);
+  if (parts.length !== 2 || parts[0] !== "assets" || !/^(?:[a-zA-Z0-9]|[a-zA-Z0-9][a-zA-Z0-9._-]{0,118}[a-zA-Z0-9_-])$/.test(parts[1]) || RESERVED.test(parts[1])) fail("UNSAFE_ASSET_PATH", "Asset path must contain one portable filename under assets/", path);
   return value;
 }
 function binding(value, games, path) {
@@ -64,6 +64,7 @@ export function validateProject(project) {
   if (!Array.isArray(project.assets) || project.assets.length > 128) fail("INVALID_ASSETS", "assets must be an array of at most 128 entries", "$.assets");
   if (!Array.isArray(project.games) || project.games.length > 16) fail("INVALID_GAMES", "games must be an array of at most 16 entries", "$.games");
   if (!Array.isArray(project.components) || project.components.length !== 1) fail("INVALID_COMPONENTS", "Schema v1 requires exactly one root component", "$.components");
+  if (project.components[0]?.type !== "container") fail("INVALID_ROOT_COMPONENT", "The project root component must be a container", "$.components[0].type");
 
   const ids = new Set([project.projectId]), assets = new Map(), assetPaths = new Set();
   for (const [i, a] of project.assets.entries()) {
@@ -75,8 +76,9 @@ export function validateProject(project) {
     validateAssetPath(a.path, `${p}.path`);
     if (a.kind === "applicationIcon" && !a.path.endsWith(".ico")) fail("INVALID_APP_ICON_PATH", "Application icon assets must use a lowercase .ico file", `${p}.path`);
     if (a.kind === "image" && a.path.toLowerCase().endsWith(".ico")) fail("INVALID_ASSET_KIND", "ICO files must use kind applicationIcon", `${p}.kind`);
-    if (assetPaths.has(a.path)) fail("DUPLICATE_ASSET_PATH", "Asset paths must be unique", `${p}.path`);
-    assetPaths.add(a.path); assets.set(a.id, a);
+    const normalizedAssetPath = a.path.toLowerCase();
+    if (assetPaths.has(normalizedAssetPath)) fail("DUPLICATE_ASSET_PATH", "Asset paths must be unique using Windows case-insensitive comparison", `${p}.path`);
+    assetPaths.add(normalizedAssetPath); assets.set(a.id, a);
   }
   const appIcon = assets.get(w.iconAssetId);
   if (!appIcon) fail("MISSING_APP_ICON", "window.iconAssetId must reference a project asset", "$.window.iconAssetId");

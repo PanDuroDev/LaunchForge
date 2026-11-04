@@ -21,22 +21,22 @@ Top-level fields:
 | `games` | Local game metadata with stable ID and `coverAssetId` reference |
 | `components` | Exactly one root container in v1; child tree is capped and typed |
 
-The schema is intentionally constrained. Schema v1 supports `container`, `text`, `image`, `button`, and `gameCard`; it does not support arbitrary HTML, CSS, JavaScript, remote data binding, plugins, custom components, or a general-purpose layout language.
+The schema is intentionally constrained. The only top-level component must be a `container`; nested components are limited by the same allowlist and bounded tree rules. Schema v1 supports `container`, `text`, `image`, `button`, and `gameCard`; it does not support arbitrary HTML, CSS, JavaScript, remote data binding, plugins, custom components, or a general-purpose layout language.
 
 ## 2. Stable identifiers and assets
 
-- IDs are UUIDv4 strings and are assigned when an entity is created. They are not derived from names, list position, display order, or file path.
+- IDs are lowercase canonical UUIDv4 strings and are assigned when an entity is created. Uppercase UUID spellings are rejected so one identifier has exactly one serialized form. IDs are not derived from names, list position, display order, or file path.
 - IDs are unique across the project, assets, games, and components in one project document.
 - Renaming or reordering an entity does not change its ID.
 - Components reference assets and games by ID, never by array index or user-visible name.
-- Asset paths are relative to the project root and use `/` separators. Schema v1 accepts one filename under `assets/` only. Absolute paths, drive/UNC/device paths, `..`, backslashes, ADS syntax, encoded separators, and reserved Windows device names are rejected.
+- Asset paths are relative to the project root and use `/` separators. Schema v1 accepts one filename under `assets/` only. Absolute paths, drive/UNC/device paths, `..`, backslashes, ADS syntax, encoded separators, reserved Windows device names, and filenames ending in a dot are rejected. Asset-path uniqueness is checked case-insensitively to match Windows filesystem behavior.
 - A lexical path check is not sufficient at runtime. The Rust host must canonicalize the final destination immediately before access and reject symlink, junction, or reparse-point escapes from the authorized project/install root.
 - Export records the resolved asset inventory and SHA-256 values in build metadata. The main project document does not embed binary assets.
 
 ### Application icon contract
 
 - `window.iconAssetId` is required and must reference one project asset whose kind is exactly `applicationIcon`. It is a stable UUID reference, not a user-supplied path.
-- An `applicationIcon` asset must use one plain project-relative filename under `assets/` with a lowercase `.ico` extension. An ordinary `image` asset cannot be used as the application icon.
+- An `applicationIcon` asset must use one plain project-relative filename under `assets/` with a lowercase `.ico` extension. An ordinary `image` asset cannot be used as the application icon. All asset paths are unique using case-insensitive comparison.
 - The Windows ICO must contain 16, 24, 32, 48, 64, and 256 pixel image entries. The build validates the ICO directory and each entry's bounds before native compilation. This follows Tauri's [Windows icon requirements](https://v2.tauri.app/develop/icons/).
 - The Windows build resolves the asset ID from the validated project, canonicalizes its path under the project assets root, and stages those exact bytes as `src-tauri/icons/icon.ico`. Tauri embeds that resource into the portable executable; the launcher does not depend on a separate icon file at runtime.
 - Build metadata records `applicationIconAssetId` and `applicationIconSha256`. The icon is also included in `assetManifestSha256`. A missing, malformed, or non-`applicationIcon` reference blocks export.
@@ -121,6 +121,14 @@ interface BuildResultV1 {
 
 The build request deliberately does not duplicate the icon path or ID: it resolves the single source of truth through `projectPath` → `window.iconAssetId`. `BuildResultV1` returns the resolved icon asset ID and SHA-256 so the embedded Windows resource can be audited against the project. The initial distribution format is **portable** for the MVP spike; do not add an installer until the portable package is stable. The actual Windows package format is not validated by the browser-only PoC. Export must validate the project, resolve the complete asset set, scan for prohibited secrets, verify target capabilities, copy the shared renderer/runtime, and write deterministic metadata. A failure in any security-critical step blocks export.
 
+### Portable Windows and cross-field validation rules
+
+- UUIDs are canonical lowercase UUIDv4 strings. The JSON Schema and semantic validator reject uppercase hexadecimal spellings.
+- The root component must be a container. The root-item schema narrows the generic component union to `type: "container"`; nested children may use any supported component.
+- Asset filenames may contain letters, digits, dots, underscores, and hyphens, but must begin and end with a non-dot portable character. This rejects trailing-dot names that Windows normalizes.
+- Asset path uniqueness is case-insensitive in the semantic validator because the MVP target filesystem is Windows. Standard JSON Schema `uniqueItems` cannot express case-folded uniqueness of one property across array items, so this cross-item invariant is enforced by the normative semantic validator and must be mirrored by the Rust implementation.
+- The semantic validator enforces `minWidth <= width` and `minHeight <= height`. JSON Schema Draft 2020-12 expresses each field's independent bounds; it cannot portably compare sibling property values. These cross-field comparisons are therefore explicitly owned by the semantic validator and must be tested in every implementation.
+
 ## 7. Versioning and migration policy
 
 - Project schema, Runtime API, renderer contract, and build manifest are separately versioned.
@@ -136,4 +144,4 @@ A diagnostic has `code`, `severity` (`info|warning|error`), `message`, and optio
 
 ## 9. Compatibility impact
 
-This proposal establishes new v1 contracts in a repository that currently has no implementation or project files. It does not migrate existing user data. Once accepted, Phase 1 must implement these definitions rather than creating parallel schema, component, or Runtime API variants. Any change after acceptance requires a proposal describing compatibility, migration, fixtures, and the affected Phase 1 work packages.
+This proposal establishes new v1 contracts in a repository that currently has no implementation or project files. It does not migrate existing user data. Once accepted, Phase 1 must implement these definitions rather than creating parallel schema, component, or Runtime API variants. The Phase 0 consistency amendment adds lowercase canonical UUIDs, case-insensitive asset-path uniqueness, portable no-trailing-dot filenames, a container-only root, and cross-field window dimension checks. Existing Phase 0 fixtures already conform; no existing user project migration is required. Any change after acceptance requires a proposal describing compatibility, migration, fixtures, and the affected Phase 1 work packages.
