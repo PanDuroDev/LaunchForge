@@ -580,6 +580,13 @@ fn validate_semantics(project: &Value) -> Result<(), ProjectError> {
                 "Game cover references an unknown asset",
             ));
         }
+        if asset_kinds.get(&normalized_id(cover_id)).map(String::as_str) != Some("image") {
+            return Err(semantic_failure(
+                "INVALID_ASSET_KIND",
+                format!("{path}.coverAssetId"),
+                "Game cover references must point to an image asset",
+            ));
+        }
     }
 
     let components = project["components"]
@@ -604,6 +611,7 @@ fn validate_semantics(project: &Value) -> Result<(), ProjectError> {
             &format!("$.components[{index}]"),
             &mut ids,
             &asset_ids,
+            &asset_kinds,
             &game_ids,
             &mut component_count,
         )?;
@@ -618,6 +626,7 @@ fn validate_component(
     path: &str,
     ids: &mut HashSet<String>,
     asset_ids: &HashSet<String>,
+    asset_kinds: &HashMap<String, String>,
     game_ids: &HashSet<String>,
     component_count: &mut usize,
 ) -> Result<(), ProjectError> {
@@ -655,6 +664,7 @@ fn validate_component(
                     &format!("{path}.children[{index}]"),
                     ids,
                     asset_ids,
+                    asset_kinds,
                     game_ids,
                     component_count,
                 )?;
@@ -680,6 +690,13 @@ fn validate_component(
                     "MISSING_ASSET",
                     format!("{path}.props.assetId"),
                     "Image references an unknown asset",
+                ));
+            }
+            if asset_kinds.get(&normalized_id(asset_id)).map(String::as_str) != Some("image") {
+                return Err(semantic_failure(
+                    "INVALID_ASSET_KIND",
+                    format!("{path}.props.assetId"),
+                    "Image components must reference an image asset",
                 ));
             }
         }
