@@ -1,0 +1,26 @@
+name: Phase 3 content data checks
+
+on:
+  pull_request:
+    paths:
+      - "packages/content-data/**"
+      - ".github/workflows/phase3-content-data.yml"
+  push:
+    branches: [main]
+    paths:
+      - "packages/content-data/**"
+
+jobs:
+  content-data:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: packages/content-data
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: npm install
+      - run: npm run typecheck
+      - run: npm test
