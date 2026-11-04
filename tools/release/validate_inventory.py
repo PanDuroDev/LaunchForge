@@ -94,6 +94,10 @@ def _validate_version(value: Any, channel: str) -> None:
     if not match:
         raise ValidationError("version must be a valid semantic version")
     prerelease = match.group(4)
+    if prerelease is not None:
+        identifiers = prerelease.split(".")
+        if any(part.isdigit() and len(part) > 1 and part.startswith("0") for part in identifiers):
+            raise ValidationError("numeric semantic-version prerelease identifiers must not contain leading zeroes")
     if channel == "stable" and prerelease is not None:
         raise ValidationError("stable channel versions must not contain a prerelease suffix")
     if channel in {"beta", "preview"} and prerelease is None:
