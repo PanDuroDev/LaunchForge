@@ -19,9 +19,21 @@ class FakeResponse:
         self.offset = 0
         self.headers = headers or {}
         self.closed = False
+        self.read_calls = 0
+        self.read1_calls = 0
 
     def read(self, amount=-1):
         """Read at most the requested number of bytes from the response."""
+        self.read_calls += 1
+        if amount < 0:
+            amount = len(self.body) - self.offset
+        result = self.body[self.offset:self.offset + amount]
+        self.offset += len(result)
+        return result
+
+    def read1(self, amount=-1):
+        """Read at most one available test chunk from the response."""
+        self.read1_calls += 1
         if amount < 0:
             amount = len(self.body) - self.offset
         result = self.body[self.offset:self.offset + amount]
@@ -82,6 +94,8 @@ class DownloaderTests(unittest.TestCase):
         self.assertEqual(result.read_bytes(), self.payload)
         self.assertTrue(progress)
         self.assertEqual(progress[-1], (len(self.payload), len(self.payload)))
+        self.assertGreater(response.read1_calls, 0)
+        self.assertEqual(response.read_calls, 0)
         self.assertTrue(response.closed)
 
     def test_hash_mismatch_removes_partial_file(self):
