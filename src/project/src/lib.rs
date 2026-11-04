@@ -151,7 +151,6 @@ impl ProjectDocument {
 /// The normative JSON Schema remains in the single repository-owned schema
 /// file. This type adds only semantic checks that need to inspect relationships
 /// between different entities in the same project.
-#[derive(Debug)]
 pub struct ProjectValidator {
     schema_validator: Validator,
 }
@@ -221,7 +220,6 @@ impl ProjectValidator {
 }
 
 /// The P1-A project create/open/save service.
-#[derive(Debug)]
 pub struct ProjectStore {
     validator: ProjectValidator,
 }
