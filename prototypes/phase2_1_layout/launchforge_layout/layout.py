@@ -231,11 +231,20 @@ def _allocate_fill(specs: Sequence[AxisSpec], available: float) -> list[float]:
     remaining = available
 
     while active:
-        # Sort indices so floating-point accumulation and tie handling are stable.
+        # Normalize by the largest active weight before summing. Every weight
+        # is finite and positive, but their raw sum can still overflow to
+        # infinity (for example, two weights of 1e308). Normalization keeps
+        # the denominator bounded by the number of active children and
+        # preserves the intended weighted ratios.
         ordered_active = sorted(active)
-        total_weight = sum(specs[index].value for index in ordered_active)
+        max_weight = max(specs[index].value for index in ordered_active)
+        normalized_weights = {
+            index: specs[index].value / max_weight
+            for index in ordered_active
+        }
+        total_normalized_weight = sum(normalized_weights.values())
         proposed = {
-            index: remaining * specs[index].value / total_weight
+            index: remaining * normalized_weights[index] / total_normalized_weight
             for index in ordered_active
         }
         min_frozen: dict[int, float] = {}
