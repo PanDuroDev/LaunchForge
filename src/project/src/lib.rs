@@ -312,7 +312,7 @@ impl ProjectStore {
             });
         }
 
-        let mut file = File::open(path).map_err(|error| io_error("opening project file", error))?;
+        let file = File::open(path).map_err(|error| io_error("opening project file", error))?;
         let mut bytes = Vec::with_capacity(metadata.len() as usize);
         file.take((MAX_PROJECT_BYTES + 1) as u64)
             .read_to_end(&mut bytes)
@@ -441,11 +441,32 @@ fn validate_portable_asset_path(path: &str, diagnostic_path: &str) -> Result<(),
 }
 
 fn validate_semantics(project: &Value) -> Result<(), ProjectError> {
+    let project_name = string_at(project, "name").expect("schema validates project name");
+    if project_name.trim().is_empty() {
+        return Err(semantic_failure(
+            "INVALID_STRING",
+            "$.name",
+            "Project name cannot contain only whitespace",
+        ));
+    }
+
     let mut ids = HashSet::new();
     let project_id = string_at(project, "projectId").expect("schema requires projectId");
     insert_unique_id(&mut ids, project_id, "$.projectId")?;
 
     let window = project.get("window").expect("schema requires window");
+    if string_at(window, "title")
+        .expect("schema validates window title")
+        .trim()
+        .is_empty()
+    {
+        return Err(semantic_failure(
+            "INVALID_STRING",
+            "$.window.title",
+            "Window title cannot contain only whitespace",
+        ));
+    }
+
     let width = window["width"].as_u64().expect("schema validates width");
     let height = window["height"].as_u64().expect("schema validates height");
     let min_width = window["minWidth"]
@@ -495,6 +516,15 @@ fn validate_semantics(project: &Value) -> Result<(), ProjectError> {
     let mut game_ids = HashSet::new();
     for (index, game) in games.iter().enumerate() {
         let path = format!("$.games[{index}]");
+        let title = string_at(game, "title").expect("schema validates game title");
+        if title.trim().is_empty() {
+            return Err(semantic_failure(
+                "INVALID_STRING",
+                format!("{path}.title"),
+                "Game title cannot contain only whitespace",
+            ));
+        }
+
         let id = string_at(game, "id").expect("schema validates game id");
         insert_unique_id(&mut ids, id, &format!("{path}.id"))?;
         game_ids.insert(normalized_id(id));
@@ -588,6 +618,18 @@ fn validate_component(
             }
         }
         "image" => {
+            if string_at(props, "alt")
+                .expect("schema validates image alt")
+                .trim()
+                .is_empty()
+            {
+                return Err(semantic_failure(
+                    "INVALID_STRING",
+                    format!("{path}.props.alt"),
+                    "Image alt text cannot contain only whitespace",
+                ));
+            }
+
             let asset_id = string_at(props, "assetId").expect("schema validates assetId");
             if !asset_ids.contains(&normalized_id(asset_id)) {
                 return Err(semantic_failure(
@@ -611,6 +653,18 @@ fn validate_component(
             }
         }
         "button" => {
+            if string_at(props, "label")
+                .expect("schema validates button label")
+                .trim()
+                .is_empty()
+            {
+                return Err(semantic_failure(
+                    "INVALID_STRING",
+                    format!("{path}.props.label"),
+                    "Button label cannot contain only whitespace",
+                ));
+            }
+
             let action = props.get("action").expect("schema validates action");
             if string_at(action, "type") == Some("launchGame") {
                 let game_id =
