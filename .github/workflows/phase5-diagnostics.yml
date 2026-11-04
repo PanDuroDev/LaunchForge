@@ -3,6 +3,7 @@ name: Phase 5 diagnostics sanitizer validation
 on:
   pull_request:
     paths:
+      - "tools/__init__.py"
       - "tools/diagnostics/**"
       - "tests/diagnostics/**"
       - "schemas/diagnostic-event-v1.schema.json"
