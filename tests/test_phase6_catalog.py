@@ -127,6 +127,7 @@ class ConformanceCatalogTests(unittest.TestCase):
         catalog = minimal_catalog(
             minimal_case(contract_dependencies=["phase2:asset-layout-contracts"])
         )
+        catalog["dependency_registry"] = ["phase0:project-format"]
         errors = validate_catalog(catalog)
         self.assertTrue(any("unregistered dependency" in error for error in errors))
 
