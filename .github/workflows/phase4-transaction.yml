@@ -16,7 +16,7 @@ permissions:
 
 jobs:
   posix-tests:
-    name: POSIX filesystem tests (Python \${{ matrix.python-version }})
+    name: POSIX filesystem tests (Python ${{ matrix.python-version }})
     runs-on: ubuntu-24.04
     timeout-minutes: 10
     strategy:
@@ -29,7 +29,7 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: \${{ matrix.python-version }}
+          python-version: ${{ matrix.python-version }}
       - name: Compile package and tests
         working-directory: prototypes/phase4_2_3
         run: python -m compileall -q launchforge_delivery tests
