@@ -10,6 +10,7 @@ This crate implements the P1-A project persistence boundary against the Phase 0 
 - Enforce semantic invariants that need cross-entity inspection: canonical lowercase UUIDv4 IDs, typed application-icon references, asset/game references, root container, component count/depth, window minimums, portable asset filename rules, and duplicate asset paths.
 - Open project files with validation.
 - Save validated projects through a same-directory temporary file and an atomic replacement operation.
+- Return optional metadata from document accessors so untrusted in-memory mutations cannot turn simple reads into panics.
 - Reject a project file that is itself a symbolic link.
 
 ## Single source of truth
