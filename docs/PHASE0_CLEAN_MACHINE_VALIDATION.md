@@ -18,11 +18,11 @@ The machine should have no prior LaunchForge files or state. Start from a clean 
 
 ## Obtain the candidate package
 
-1. Open PR #16 and its Checks/Actions run history.
-2. Select a successful run of the Phase 0 Windows spike workflow.
-3. Download the **launchforge-phase0-windows-portable** artifact. GitHub Actions provides this artifact as an outer ZIP archive.
+1. Open PR #16 and note its current head commit SHA.
+2. In the PR Checks/Actions history, select a successful Phase 0 Windows spike run whose `head_sha` exactly matches that current PR head SHA. Do not use an artifact from an earlier commit if PR #16 has advanced.
+3. Download the **launchforge-phase0-windows-portable** artifact from that exact run. GitHub Actions provides this artifact as an outer ZIP archive.
 4. Extract the outer archive into a temporary working directory. It contains the inner **LaunchForge-Phase0-Portable.zip** produced by the workflow.
-5. Keep the extracted inner ZIP unchanged. Record the inner ZIP's SHA-256 before testing; pass this inner ZIP to the verifier.
+5. Keep the extracted inner ZIP unchanged. Record the PR #16 head SHA, the successful workflow run URL, and the inner ZIP's SHA-256 together in the test notes. Pass this unchanged inner ZIP to the verifier.
 
 If the workflow did not upload an artifact, the clean-machine test cannot start. The run must first complete the build, smoke, packaging, and upload steps.
 
