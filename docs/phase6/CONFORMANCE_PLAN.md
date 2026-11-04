@@ -234,7 +234,7 @@ Until then, this protocol is a specification/handoff artifact and does not annou
 
 The planned cases are mirrored in `conformance/phase6-catalog.json`. Each entry records its stable test ID, category, scenario, expected behavior, applicable product surfaces, prerequisite-area labels, required evidence, mandatory flag, and lifecycle state. The catalog also has one canonical `dependency_registry`; every case dependency must match one registered identifier and the registry must not contain duplicate identifiers.
 
-All 36 entries currently use `lifecycle: planned`. The 38 registered dependency strings are planning labels only and are not approved API names or proof that the dependencies exist. Keep each prerequisite area under one canonical label; do not introduce spelling/plural aliases.
+All 38 entries currently use `lifecycle: planned`. The 38 registered dependency strings are planning labels only and are not approved API names or proof that the dependencies exist. Keep each prerequisite area under one canonical label; do not introduce spelling/plural aliases.
 
 Validate the catalog structure from the repository root:
 
@@ -254,7 +254,7 @@ The repository workflow `.github/workflows/phase6-catalog.yml` runs on relevant 
 2. `python -m unittest discover -s tests -p "test_phase6_catalog.py" -v`
 3. `python -m compileall -q tools/validate_conformance_catalog.py tests/test_phase6_catalog.py`
 
-A passing workflow demonstrates catalog metadata/test-harness health only. It is not a substitute for product-level migration, renderer, Runtime, packaging, security, or support-matrix conformance. The initial workflow attempt exposed an invalid `actions/setup-python` `cache: false` setting; the setting was removed, and the subsequent run passed on the exact PR checkout (36 catalog cases, 13 unit tests, compileall).
+A passing workflow demonstrates catalog metadata/test-harness health only. It is not a substitute for product-level migration, renderer, Runtime, packaging, security, or support-matrix conformance. The initial workflow attempt exposed an invalid `actions/setup-python` `cache: false` setting; the setting was removed, and the subsequent run passed on the exact PR checkout (the earlier baseline of 36 catalog cases, 13 unit tests, compileall).
 
 ## 9. Upstream contract traceability
 
@@ -270,3 +270,10 @@ The traceability map is provisional. Do not encode candidate schema/API details 
 - Phase 5 PR #18 records **FAIL / NO-GO** because the accepted Runtime/package, supported Windows baseline, updater, clean-machine install/recovery evidence and Runtime diagnostics integration are absent. PRs #14 and #15 remain unmerged QA/design contributions, not a production updater.
 
 These failures and boundaries keep executable Phase 6 product conformance, 6.2 expansion selection, and 6.3 support blocked. Do not lower the gate because isolated test suites pass on another OS or a reference prototype passes.
+
+## 11. Newly tracked project-format cases
+
+- `LF-COMPAT-007` requires the approved UUID canonicalization rule to be implemented identically by the project JSON Schema and semantic validator, including stable-ID uniqueness for case variants.
+- `LF-COMPAT-008` requires the approved application-icon reference to validate and the complete declared ICO payload to be bounded and embedded byte-for-byte in the package.
+
+Both remain planned until Phase 0/1 approves the source contracts and supplies runnable fixtures. The catalog does not choose UUID casing or add schema fields.
