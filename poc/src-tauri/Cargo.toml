@@ -1,0 +1,12 @@
+[package]
+name = "launchforge_phase0_spike"
+version = "0.1.0"
+description = "LaunchForge Phase 0 Windows host spike"
+authors = ["PanDuroDev"]
+edition = "2021"
+
+[build-dependencies]
+tauri-build = { version = "2" }
+
+[dependencies]
+tauri = { version = "2" }

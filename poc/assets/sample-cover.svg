@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="960" height="540" viewBox="0 0 960 540">
+  <defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#263c63"/><stop offset="1" stop-color="#101722"/></linearGradient></defs>
+  <rect width="960" height="540" fill="url(#g)"/>
+  <circle cx="760" cy="160" r="110" fill="#6aa9ff" opacity=".45"/>
+  <path d="M0 430 250 260l190 150 210-190 310 250v70H0Z" fill="#182a43"/>
+  <text x="64" y="110" fill="#f5f7fa" font-family="Segoe UI, sans-serif" font-size="40" font-weight="700">LaunchForge</text>
+  <text x="64" y="165" fill="#c7d5e8" font-family="Segoe UI, sans-serif" font-size="24">Shared renderer fixture</text>
+</svg>

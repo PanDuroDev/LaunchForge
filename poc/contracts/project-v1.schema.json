@@ -1,0 +1,153 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://launchforge.dev/schemas/project-v1.schema.json",
+  "title": "LaunchForge Project v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["format", "schemaVersion", "projectId", "name", "window", "theme", "assets", "games", "components"],
+  "properties": {
+    "format": { "const": "launchforge.project" },
+    "schemaVersion": { "const": 1 },
+    "projectId": { "$ref": "#/$defs/uuid" },
+    "name": { "type": "string", "minLength": 1, "maxLength": 80 },
+    "window": { "$ref": "#/$defs/window" },
+    "theme": { "$ref": "#/$defs/theme" },
+    "assets": {
+      "type": "array", "maxItems": 128,
+      "items": {
+        "type": "object", "additionalProperties": false,
+        "required": ["id", "kind", "path"],
+        "properties": {
+          "id": { "$ref": "#/$defs/uuid" },
+          "kind": { "const": "image" },
+          "path": { "type": "string", "pattern": "^assets/[A-Za-z0-9][A-Za-z0-9._-]{0,119}$", "maxLength": 180 }
+        }
+      }
+    },
+    "games": {
+      "type": "array", "maxItems": 16,
+      "items": {
+        "type": "object", "additionalProperties": false,
+        "required": ["id", "title", "description", "coverAssetId"],
+        "properties": {
+          "id": { "$ref": "#/$defs/uuid" },
+          "title": { "type": "string", "minLength": 1, "maxLength": 120 },
+          "description": { "type": "string", "maxLength": 500 },
+          "coverAssetId": { "$ref": "#/$defs/uuid" }
+        }
+      }
+    },
+    "components": {
+      "type": "array", "minItems": 1, "maxItems": 1,
+      "items": { "$ref": "#/$defs/component" }
+    }
+  },
+  "$defs": {
+    "uuid": { "type": "string", "pattern": "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-4[0-9a-fA-F]{3}-[89aAbB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$" },
+    "window": {
+      "type": "object", "additionalProperties": false,
+      "required": ["title", "width", "height", "minWidth", "minHeight", "resizable"],
+      "properties": {
+        "title": { "type": "string", "minLength": 1, "maxLength": 80 },
+        "width": { "type": "integer", "minimum": 320, "maximum": 4096 },
+        "height": { "type": "integer", "minimum": 240, "maximum": 2160 },
+        "minWidth": { "type": "integer", "minimum": 320 },
+        "minHeight": { "type": "integer", "minimum": 240 },
+        "resizable": { "type": "boolean" }
+      }
+    },
+    "theme": {
+      "type": "object", "additionalProperties": false,
+      "required": ["surface", "text", "accent"],
+      "properties": {
+        "surface": { "$ref": "#/$defs/color" },
+        "text": { "$ref": "#/$defs/color" },
+        "accent": { "$ref": "#/$defs/color" }
+      }
+    },
+    "color": { "type": "string", "pattern": "^#[0-9a-fA-F]{6}$" },
+    "component": {
+      "oneOf": [
+        {
+          "type": "object", "additionalProperties": false,
+          "required": ["id", "type", "props", "children"],
+          "properties": {
+            "id": { "$ref": "#/$defs/uuid" }, "type": { "const": "container" },
+            "props": {
+              "type": "object", "additionalProperties": false,
+              "required": ["axis", "gap", "padding", "background"],
+              "properties": {
+                "axis": { "enum": ["vertical", "horizontal"] },
+                "gap": { "type": "integer", "minimum": 0, "maximum": 64 },
+                "padding": { "type": "integer", "minimum": 0, "maximum": 64 },
+                "background": { "enum": ["surface", "text", "accent"] }
+              }
+            },
+            "children": { "type": "array", "maxItems": 32, "items": { "$ref": "#/$defs/component" } }
+          }
+        },
+        {
+          "type": "object", "additionalProperties": false,
+          "required": ["id", "type", "props"],
+          "properties": {
+            "id": { "$ref": "#/$defs/uuid" }, "type": { "const": "text" },
+            "props": {
+              "type": "object", "additionalProperties": false,
+              "required": ["value", "fontSize", "color"],
+              "properties": {
+                "value": {
+                  "oneOf": [
+                    { "type": "string", "maxLength": 500 },
+                    { "type": "object", "additionalProperties": false, "required": ["source", "gameId", "field"], "properties": { "source": { "const": "game" }, "gameId": { "$ref": "#/$defs/uuid" }, "field": { "enum": ["title", "description"] } } }
+                  ]
+                },
+                "fontSize": { "type": "integer", "minimum": 12, "maximum": 48 },
+                "color": { "enum": ["surface", "text", "accent"] }
+              }
+            }
+          }
+        },
+        {
+          "type": "object", "additionalProperties": false,
+          "required": ["id", "type", "props"],
+          "properties": {
+            "id": { "$ref": "#/$defs/uuid" }, "type": { "const": "image" },
+            "props": {
+              "type": "object", "additionalProperties": false,
+              "required": ["assetId", "alt", "fit"],
+              "properties": { "assetId": { "$ref": "#/$defs/uuid" }, "alt": { "type": "string", "minLength": 1, "maxLength": 120 }, "fit": { "enum": ["cover", "contain"] } }
+            }
+          }
+        },
+        {
+          "type": "object", "additionalProperties": false,
+          "required": ["id", "type", "props"],
+          "properties": {
+            "id": { "$ref": "#/$defs/uuid" }, "type": { "const": "button" },
+            "props": {
+              "type": "object", "additionalProperties": false,
+              "required": ["label", "action"],
+              "properties": {
+                "label": { "type": "string", "minLength": 1, "maxLength": 40 },
+                "action": {
+                  "oneOf": [
+                    { "type": "object", "additionalProperties": false, "required": ["type", "target"], "properties": { "type": { "const": "navigate" }, "target": { "enum": ["home", "library"] } } },
+                    { "type": "object", "additionalProperties": false, "required": ["type", "gameId"], "properties": { "type": { "const": "launchGame" }, "gameId": { "$ref": "#/$defs/uuid" } } }
+                  ]
+                }
+              }
+            }
+          }
+        },
+        {
+          "type": "object", "additionalProperties": false,
+          "required": ["id", "type", "props"],
+          "properties": {
+            "id": { "$ref": "#/$defs/uuid" }, "type": { "const": "gameCard" },
+            "props": { "type": "object", "additionalProperties": false, "required": ["gameId"], "properties": { "gameId": { "$ref": "#/$defs/uuid" } } }
+          }
+        }
+      ]
+    }
+  }
+}

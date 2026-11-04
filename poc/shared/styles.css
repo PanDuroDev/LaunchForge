@@ -1,0 +1,23 @@
+:root {
+  color-scheme: dark;
+  font-family: "Segoe UI", system-ui, sans-serif;
+  background: #0b1019;
+  color: #f5f7fa;
+}
+
+* { box-sizing: border-box; }
+body { margin: 0; min-width: 320px; min-height: 100vh; }
+#launcher-root { width: 100%; min-height: 100vh; padding: 24px; }
+.lf-container { display: flex; width: min(100%, 960px); margin: 0 auto; border-radius: 16px; }
+.lf-container--vertical { flex-direction: column; }
+.lf-container--horizontal { flex-direction: row; align-items: center; }
+.lf-text { margin: 0; font-weight: 650; }
+.lf-image { display: block; max-width: 100%; max-height: 240px; border-radius: 10px; }
+.lf-button { width: fit-content; min-height: 42px; padding: 0 18px; border: 0; border-radius: 8px; background: #6aa9ff; color: #101722; font: inherit; font-weight: 650; cursor: pointer; }
+.lf-button:focus-visible { outline: 3px solid #fff; outline-offset: 3px; }
+.lf-game-card { display: flex; align-items: center; gap: 16px; max-width: 640px; }
+.lf-game-card__cover { width: 160px; height: 100px; border-radius: 8px; object-fit: cover; }
+.lf-game-card__copy h2 { margin: 0 0 6px; font-size: 20px; }
+.lf-game-card__copy p { margin: 0; opacity: .8; }
+#status { position: fixed; inset: auto 16px 16px auto; max-width: 320px; }
+@media (max-width: 560px) { .lf-game-card { align-items: flex-start; flex-direction: column; } .lf-game-card__cover { width: 100%; height: auto; } }

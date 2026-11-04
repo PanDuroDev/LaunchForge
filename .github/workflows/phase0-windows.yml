@@ -1,0 +1,76 @@
+name: Phase 0 Windows spike
+
+on:
+  pull_request:
+    paths:
+      - "poc/**"
+      - "scripts/measure-windows.ps1"
+      - "docs/phase-0/**"
+      - ".github/workflows/phase0-windows.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  windows-build:
+    runs-on: windows-2022
+    timeout-minutes: 30
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Set up Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Run contract and renderer tests
+        shell: pwsh
+        run: node --test .\poc\tests\phase0.test.mjs
+
+      - name: Build standalone renderer export
+        shell: pwsh
+        run: node .\poc\scripts\build-export.mjs
+
+      - name: Build Tauri Windows host
+        shell: pwsh
+        run: cargo build --release --manifest-path .\poc\src-tauri\Cargo.toml
+
+      - name: Smoke-test the standalone host process
+        shell: pwsh
+        run: |
+          $app = Resolve-Path .\poc\src-tauri\target\release\launchforge_phase0_spike.exe
+          $process = Start-Process -FilePath $app.Path -PassThru
+          try {
+            Start-Sleep -Seconds 8
+            $process.Refresh()
+            if ($process.HasExited) {
+              throw "Tauri host exited during the smoke-test window."
+            }
+            if ($process.MainWindowHandle -eq 0) {
+              throw "Tauri host process stayed alive but did not expose a main window handle."
+            }
+          }
+          finally {
+            Stop-Process -Id $process.Id -Force -ErrorAction SilentlyContinue
+          }
+
+      - name: Package portable spike
+        shell: pwsh
+        run: |
+          $package = Join-Path $env:RUNNER_TEMP "LaunchForge-Phase0-Portable"
+          New-Item -ItemType Directory -Force -Path $package | Out-Null
+          Copy-Item .\poc\src-tauri\target\release\launchforge_phase0_spike.exe $package
+          Copy-Item .\poc\dist\BUILD-METADATA.json $package
+          Compress-Archive -Path (Join-Path $package "*") -DestinationPath (Join-Path $env:RUNNER_TEMP "LaunchForge-Phase0-Portable.zip") -Force
+
+      - name: Upload Windows build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: launchforge-phase0-windows-portable
+          path: ${{ runner.temp }}\LaunchForge-Phase0-Portable.zip
+          if-no-files-found: error
