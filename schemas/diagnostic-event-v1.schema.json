@@ -1,0 +1,143 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://launchforge.dev/schemas/diagnostic-event-v1.schema.json",
+  "title": "LaunchForge Sanitized Diagnostic Event v1",
+  "description": "Strict allow-list schema for local support diagnostics. No free-form messages, paths, URLs, PII or stack traces.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "timestamp_utc",
+    "severity",
+    "component",
+    "event_code",
+    "outcome"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": 1
+    },
+    "timestamp_utc": {
+      "type": "string",
+      "format": "date-time",
+      "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(?:\\.\\d{1,6})?Z$"
+    },
+    "severity": {
+      "enum": [
+        "debug",
+        "info",
+        "warning",
+        "error",
+        "critical"
+      ]
+    },
+    "component": {
+      "enum": [
+        "studio",
+        "runtime",
+        "launcher_updater",
+        "game_delivery",
+        "packager",
+        "bootstrapper"
+      ]
+    },
+    "event_code": {
+      "description": "No Runtime/Studio event-code registry has been approved; all values are rejected until a reviewed source of truth is defined.",
+      "not": {}
+    },
+    "outcome": {
+      "enum": [
+        "started",
+        "completed",
+        "failed",
+        "cancelled",
+        "recovered",
+        "recovery_failed"
+      ]
+    },
+    "error_code": {
+      "enum": [
+        "LF_IO_DENIED",
+        "LF_NETWORK_TIMEOUT",
+        "LF_NETWORK_TLS",
+        "LF_METADATA_EXPIRED",
+        "LF_METADATA_SIGNATURE",
+        "LF_METADATA_ROLLBACK",
+        "LF_TARGET_HASH",
+        "LF_DISK_SPACE",
+        "LF_PATH_REJECTED",
+        "LF_STAGE_FAILED",
+        "LF_HEALTH_CHECK",
+        "LF_ROLLBACK",
+        "LF_RECOVERY_REQUIRED",
+        "LF_RUNTIME_INCOMPATIBLE",
+        "LF_UNKNOWN"
+      ]
+    },
+    "operation_stage": {
+      "enum": [
+        "startup",
+        "project_load",
+        "project_save",
+        "connection",
+        "export",
+        "install",
+        "upgrade",
+        "uninstall",
+        "metadata_fetch",
+        "metadata_verify",
+        "target_download",
+        "target_verify",
+        "stage",
+        "commit",
+        "health_check",
+        "rollback",
+        "recovery",
+        "game_install",
+        "game_update",
+        "game_verify",
+        "game_repair",
+        "game_launch"
+      ]
+    },
+    "duration_ms": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 86400000
+    },
+    "app_version": {
+      "type": "string",
+      "maxLength": 128,
+      "pattern": "^(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)(?:-(?:alpha|beta|preview|rc)(?:\\.(?:0|[1-9][0-9]*))?)?$"
+    },
+    "runtime_version": {
+      "type": "string",
+      "maxLength": 128,
+      "pattern": "^(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)(?:-(?:alpha|beta|preview|rc)(?:\\.(?:0|[1-9][0-9]*))?)?$"
+    },
+    "platform": {
+      "enum": [
+        "windows-x64",
+        "windows-arm64"
+      ]
+    },
+    "metadata_role": {
+      "enum": [
+        "root",
+        "targets",
+        "snapshot",
+        "timestamp"
+      ]
+    },
+    "correlation_id": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+      "description": "Random UUID version 4 only; do not encode user or device identifiers."
+    },
+    "attempt": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 100
+    }
+  }
+}
