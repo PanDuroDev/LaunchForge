@@ -349,6 +349,8 @@ def _inventory_tree(root_fd: int, prefix: str = "") -> tuple[set[str], set[str]]
             finally:
                 os.close(child_fd)
         elif stat.S_ISREG(st.st_mode):
+            if st.st_nlink != 1:
+                raise IntegrityError(f"installed file is hard-linked outside its release tree: {relative}")
             files.add(relative)
         else:
             raise IntegrityError(f"installed tree contains a special filesystem object: {relative}")

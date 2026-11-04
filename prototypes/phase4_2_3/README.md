@@ -10,7 +10,7 @@
 - Publishes a bounded durable journal before the first rename; startup recovery infers transaction state from the journal plus target/stage/backup entries.
 - Uses per-install flock, absolute parent-path walk from / with O_NOFOLLOW, directory file descriptors, openat-style relative operations, O_EXCL staging files, file/directory fsync, and no-follow recursive cleanup.
 - Enforces file count, aggregate bytes, cross-platform destination path rules, and a free-space safety reserve. Cancellation is accepted during staging and disabled after commit begins.
-- verify inventories the full tree and rejects extra files, symlinks and special filesystem objects, in addition to rechecking every declared hash.
+- verify inventories the full tree and rejects extra files, symlinks, hard links and special filesystem objects, in addition to rechecking every declared hash.
 - The install directory is dedicated to immutable program files. Save games/configuration must live in a separate user-data directory; full-directory replacement intentionally removes old extras.
 
 ## Phase 4.3: lifecycle boundary
@@ -36,4 +36,5 @@ No third-party dependencies are required.
 - The LauncherAdapter is an interface only. Process creation, executable handle validation at launch time, argument/environment policy, graceful shutdown, process exit monitoring and Windows job-object behavior remain native Runtime work.
 - Phase 4.1 integration uses a structural adapter to avoid importing an unmerged PR. Manifest trust/bootstrap and network transport are not duplicated here; every source is hashed again when staged.
 - It does not define an install location chooser, multi-volume migration, game save migration, ACL policy, key rotation/revocation, or anti-rollback state.
+- The current Phase 4.1 manifest prototype does not specify executable permission metadata; the POSIX prototype creates files as private non-executable data. A portable/POSIX release needs a signed executable-attribute decision. Windows process launch and ACL semantics must be supplied by the approved native Runtime.
 - Full-directory swap is not delta patching and only suits immutable program files, not saves or mutable publisher/user data.

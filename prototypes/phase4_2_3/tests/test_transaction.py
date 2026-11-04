@@ -45,6 +45,11 @@ class TransactionTests(unittest.TestCase):
         asset_source = asset_source or self.source_b
         return [artifact(executable_source, "bin/game.exe"), artifact(asset_source, "data/assets.pak")]
 
+    def test_backend_fails_closed_when_platform_lacks_posix_safe_primitives(self):
+        with patch("launchforge_delivery.transaction.os.name", "nt"):
+            with self.assertRaises(UnsupportedPlatformError):
+                TransactionEngine(self.install, min_free_bytes=1)
+
     def test_install_verify_and_manifest_bound_paths(self):
         result = self.engine.install("sample.game", "1.0.0", self.release())
         self.assertEqual(result.action, "install")
@@ -93,7 +98,7 @@ class TransactionTests(unittest.TestCase):
             with self.assertRaises(OSError):
                 engine.update("sample.game", "2.0.0", self.release(executable_source=new_source))
         self.assertEqual((self.install / "bin/game.exe").read_bytes(), old)
-        self.assertEqual([p.name for p in self.base.iterdir() if p.name.startswith(".InstalledGame.launchforge-txn-")], [])
+        self.assertEqual(list(self.base.glob(self.engine.stage_prefix + "*")), [])
 
     def test_traversal_and_windows_path_attacks_rejected(self):
         for name in ("../escape.exe", "a/../../escape", "/rooted", "C:/escape", "a\\b", "a/file:ads", "a/CON.txt", "a/NUL", "a/trailing.", "a/trailing ", "a/question?.exe"):
@@ -250,6 +255,16 @@ class TransactionTests(unittest.TestCase):
         self.engine.recover()
         self.assertTrue(self.engine.verify([a.record for a in self.release(executable_source=new)]))
         self.assertEqual(list(self.base.glob(".InstalledGame.launchforge-backup-*")), [])
+
+    def test_verify_rejects_hardlinked_install_file(self):
+        self.engine.install("game", "1", self.release())
+        target = self.install / "bin/game.exe"
+        outside = self.base / "outside-hardlink.exe"
+        target.unlink()
+        os.link(self.source_a, outside)
+        os.link(outside, target)
+        self.assertFalse(self.engine.verify([a.record for a in self.release()]))
+        self.assertEqual(outside.read_bytes(), self.source_a.read_bytes())
 
     def test_verify_rejects_unmanifested_files_symlinks_and_special_objects(self):
         self.engine.install("game", "1", self.release())

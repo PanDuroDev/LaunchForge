@@ -60,7 +60,7 @@ A test hook simulates interruption at each rename/verification boundary. These t
 - Opens source files without following symlinks and requires regular files.
 - Creates new destination files with O_EXCL|O_NOFOLLOW; directory creation/open is relative to trusted directory descriptors.
 - Checks Windows-invalid path names, device names, trailing dots/spaces, reserved ADS syntax, Unicode normalization, case-fold collisions, and path-prefix conflicts before writes.
-- Verifies the entire installed tree, not only declared files; symlinks, extra files, and special objects cause verification failure.
+- Verifies the entire installed tree, not only declared files; symlinks, hard-linked files, extra files, and special objects cause verification failure.
 - Removes backups/stages without following symlinks or traversing another mounted filesystem.
 - Uses a size/count quota and checks available space plus a caller-configured safety reserve; write-time ENOSPC still fails before commit.
 
@@ -70,7 +70,7 @@ A test hook simulates interruption at each rename/verification boundary. These t
 2. Confirm the selected Runtime language/host and port this code; no shared language/toolchain is frozen in main.
 3. Approve install-root selection, parent ownership/ACL policy, user-data separation, lock behavior and multi-volume behavior.
 4. Approve journal schema/versioning, anti-rollback/current-version state, cleanup retention and manual recovery UX.
-5. Agree the Phase 4.1-to-4.2 adapter and error/progress types.
+5. Agree the Phase 4.1-to-4.2 adapter and error/progress types. The current manifest proposal has no signed executable-permission metadata; a portable target must decide whether an executable attribute belongs in the signed manifest.
 6. Perform Windows interruption/power-loss testing on the supported filesystem, including antivirus/file-lock behavior and concurrent processes.
 
 This contract is not permission to distribute managed game operations until the Windows implementation and adversarial gate pass.

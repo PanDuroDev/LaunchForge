@@ -22,7 +22,7 @@ Publisher identity and trusted public keys; signed release metadata; downloaded 
 | Concurrent install/update | Per-install flock lock and recovery before new operation | Windows cross-process lock implementation and deadlock UX |
 | Interrupted update | Durable sibling journal, same-parent rename, old backup kept until verified | Power-loss testing on supported Windows filesystems |
 | Disk exhaustion | Release byte quota, free-space reserve, write errors abort staging | Quota accounting across concurrent games/downloads and Windows storage semantics |
-| Malicious extra file/DLL planted in install tree | Exact manifest-tree verification rejects extras/symlinks/special files | Runtime must defend launch-time races and DLL search behavior |
+| Malicious extra file/DLL or hardlink planted in install tree | Exact manifest-tree verification rejects extras, symlinks, hard-linked files and special files | Runtime must defend launch-time races and DLL search behavior |
 | Unlisted executable launch | Lifecycle layer only permits manifest-declared executable | Native process API must re-open/verify by handle immediately before launch |
 | Malicious local user modifying same-user files | Parent ownership/private-mode checks; no-follow operations | Same-user malware is outside this prototype's isolation boundary; ACL policy needed |
 
@@ -35,6 +35,7 @@ The publisher signing key is provisioned out-of-band; the install parent is sele
 - The transaction implementation is a POSIX prototype, not a supported Windows reparse-point-safe implementation.
 - No native Runtime process adapter is implemented; tests use a fake adapter.
 - Phase 0 filesystem/security and Phase 1 Runtime/build contracts are not on main at the time of this handoff.
+- The 4.1 manifest currently has no signed executable-permission metadata; the POSIX prototype stages files as non-executable data. Define this before supporting portable/POSIX game launch.
 - No production tests have been run on Windows, NTFS, Defender/antivirus, real CDN or a real publisher trust store.
 
 Do not distribute Phase 4 managed installs until these blockers are resolved and the complete adversarial suite passes on the supported Windows baseline.
