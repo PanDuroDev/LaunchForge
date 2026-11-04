@@ -15,15 +15,15 @@ The machine-readable contract is [diagnostic-event-v1.schema.json](../schemas/di
 | \`timestamp_utc\` | Valid RFC 3339 UTC timestamp ending in \`Z\` |
 | \`severity\` | debug, info, warning, error, critical |
 | \`component\` | studio, runtime, launcher_updater, game_delivery, packager, bootstrapper |
-| \`event_code\` | Bounded code matching \`LF_[A-Z0-9_]+\` |
+| \`event_code\` | Fixed registry only: LF_APP_START_FAILED, LF_BOOTSTRAP_FAILED, LF_CONNECTION_FAILED, LF_EXPORT_FAILED, LF_GAME_INSTALL_FAILED, LF_GAME_LAUNCH_FAILED, LF_GAME_REPAIR_FAILED, LF_GAME_UPDATE_FAILED, LF_GAME_VERIFY_FAILED, LF_PROJECT_LOAD_FAILED, LF_PROJECT_SAVE_FAILED, LF_RECOVERY_REQUIRED, LF_RECOVERY_SUCCEEDED, LF_UPDATE_CHECK_FAILED, LF_UPDATE_FAILED, LF_UPDATE_ROLLBACK, LF_UPDATE_SUCCEEDED |
 | \`outcome\` | started, completed, failed, cancelled, recovered, recovery_failed |
 | \`error_code\` | Fixed LaunchForge error-code registry only |
 | \`operation_stage\` | Fixed operation-stage registry only |
 | \`duration_ms\`, \`attempt\` | Bounded integers |
-| \`app_version\`, \`runtime_version\` | Valid SemVer only |
+| \`app_version\`, \`runtime_version\` | Core SemVer (MAJOR.MINOR.PATCH), optionally followed only by -alpha, -beta, -preview or -rc and an optional numeric suffix; build metadata and arbitrary prerelease identifiers are rejected |
 | \`platform\` | windows-x64 or windows-arm64 |
 | \`metadata_role\` | root, targets, snapshot, timestamp |
-| \`correlation_id\` | Random UUID, not a user/device identifier |
+| \`correlation_id\` | Random UUID version 4 only; UUID versions that can embed host/device identifiers are rejected |
 
 Unknown fields or invalid values cause the **entire record to be omitted**. The exporter does not attempt to redact arbitrary free-form strings and then keep the rest of that record.
 
