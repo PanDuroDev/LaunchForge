@@ -417,7 +417,7 @@ fn validate_portable_asset_path(path: &str, diagnostic_path: &str) -> Result<(),
             .as_bytes()
             .first()
             .is_some_and(u8::is_ascii_alphanumeric)
-        || filename.len() > 120
+        || filename.len() > 124
         || !filename
             .bytes()
             .all(|byte| byte.is_ascii_alphanumeric() || b"._-".contains(&byte))
