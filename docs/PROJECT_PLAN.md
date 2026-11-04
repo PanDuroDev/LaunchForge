@@ -548,6 +548,74 @@ Do not implement every subsystem just because it appears in the long-term vision
 
 Phase 3 and Phase 2 are separate tracks after Phase 1. The data/runtime contracts can be prototyped while Studio authoring improvements proceed, but the full Connection Builder depends on the editor's stable inspector and project workflows. Phase 4 may prototype its manifest and downloader independently, but must not bypass Phase 0 security contracts or Phase 1 Runtime boundaries.
 
+### 11.1.1 Ordered implementation stages and AI handoffs
+
+The seven roadmap phases are planning groups, not single assignments for one AI agent. Each phase is split into small, ordered implementation stages. Assign one AI agent to one stage at a time. The next stage starts only after the current stage's deliverables, tests, and handoff are reviewed and accepted by the integration owner.
+
+**Default execution rule:** Stage N must pass its exit gate before Stage N+1 begins. Do not ask an agent to implement a later stage against unfinished contracts. Parallel work is allowed only where the stage explicitly identifies independent prototypes or review tasks, and those tasks must use frozen interfaces and separate owned paths.
+
+| Parent phase | Ordered sub-stages | Primary result |
+|---|---|---|
+| Phase 0 | **0.1 — Select and prove the stack** → **0.2 — Freeze MVP contracts and security rules** → **0.3 — Validate the complete technical spike** | Approved architecture and implementation-ready contracts |
+| Phase 1 | **1.1 — Project foundation** → **1.2 — Minimal editor and shared renderer** → **1.3 — Runtime, export, and end-to-end MVP** | First independently running launcher |
+| Phase 2 | **2.1 — Layout foundations** → **2.2 — Editing workflow, assets, themes, and templates** → **2.3 — Accessibility, localization, and beta validation** | Practical Studio beta |
+| Phase 3 | **3.1 — Network adapter and typed data model** → **3.2 — Connection Builder and field mapping** → **3.3 — UI states, actions, and security gate** | Safe dynamic content and interactions |
+| Phase 4 | **4.1 — Manifest, trust, and bounded downloads** → **4.2 — Transactional installation and recovery** → **4.3 — Runtime integration and adversarial validation** | Reliable game delivery |
+| Phase 5 | **5.1 — Production packaging and publisher release workflow** → **5.2 — Trusted launcher updater** → **5.3 — Security, diagnostics, and production release gate** | Production-ready launcher lifecycle |
+| Phase 6 | **6.1 — Compatibility and conformance foundation** → **6.2 — One evidence-backed expansion track** → **6.3 — Validate, document, and support the selected expansion** | A deliberately supported extension, renderer, platform, or integration |
+
+#### Stage definitions and exit gates
+
+**Phase 0**
+- **0.1 — Select and prove the stack:** compare only the shortlisted Windows candidates using one representative sample project and a reproducible measurement protocol. Deliver the PoC and raw measurements. Exit when one candidate satisfies the MVP requirements or a concrete blocker is documented.
+- **0.2 — Freeze MVP contracts and security rules:** define the minimum schema, component/renderer contract, Runtime and build interfaces, versioning/migration rules, host permissions, credential classes, network limits, path rules, and test fixtures. Exit when the integration owner approves one consistent contract set.
+- **0.3 — Validate the technical spike:** prove preview/export parity and run a standalone package on a clean supported Windows machine; publish decision records and the Phase 1 ownership map. Exit when all Phase 0 acceptance criteria pass.
+
+**Phase 1**
+- **1.1 — Project foundation:** implement create/open/save, schema validation, stable IDs, asset references, and compatibility metadata. Exit when fixture-based project round trips and validation tests pass.
+- **1.2 — Minimal editor and shared renderer:** implement the component tree, selection, inspector, basic editing, and the small MVP component set using the shared renderer. Exit when supported edits appear correctly in the preview and editor tests pass.
+- **1.3 — Runtime, export, and end-to-end MVP:** implement the standalone Runtime, restricted local game launch, deterministic export, bundled assets/runtime, diagnostics, secret scanning, and clean-machine integration tests. Exit only when the complete first-user workflow passes.
+
+**Phase 2**
+- **2.1 — Layout foundations:** implement and test the documented layout primitives, sizing, alignment, constraints, and supported window presets. Exit when layouts are deterministic at the documented sizes and DPI settings.
+- **2.2 — Editing workflow, assets, themes, and templates:** add the approved editing interactions, asset library, theme tokens, starter templates, and project workflows. Keep ownership separated by module and freeze shared contracts first. Exit when representative authoring tasks work without manual project-file edits.
+- **2.3 — Accessibility, localization, and beta validation:** complete keyboard/focus behavior, Unicode, scaling, supported RTL behavior, regression coverage, and user-task validation. Exit when existing MVP projects remain compatible and the Studio beta gate passes.
+
+**Phase 3**
+- **3.1 — Network adapter and typed data model:** implement bounded HTTPS JSON transport and typed response/binding semantics against fixtures. Exit when timeout, cancellation, size, redirect, malformed-response, and mapping tests pass.
+- **3.2 — Connection Builder and field mapping:** build endpoint configuration, connection testing, response inspection, mapping UI, and sample/live preview using the stable Studio inspector. Exit when a user can configure a supported connection without editing project files.
+- **3.3 — UI states, actions, and security gate:** add loading/offline/error states and the allowlisted action set; complete credential handling, redaction, export scanning, and preview/Runtime parity tests. Exit when unsafe actions and secret leakage are blocked.
+
+**Phase 4**
+- **4.1 — Manifest, trust, and bounded downloads:** define the versioned game manifest, publisher/artifact trust rules, integrity metadata, and constrained download service. Exit when authentic sample artifacts download and verify under resource limits.
+- **4.2 — Transactional installation and recovery:** implement staging, safe commit, update/repair, rollback, and interrupted-operation recovery. Exit when failures preserve the last valid installation or follow a tested recovery path.
+- **4.3 — Runtime integration and adversarial validation:** expose the lifecycle API/UI states and pass malicious-path/archive, reparse-point, corruption, disk-exhaustion, interruption, and recovery tests. Exit before distribution only when all security-critical tests pass.
+
+**Phase 5**
+- **5.1 — Production packaging and publisher release workflow:** harden install/uninstall/upgrade packaging, dependency inventory, versioning, release channels, artifact metadata, and signing guidance. Exit when clean-machine packaging and release procedures are reproducible.
+- **5.2 — Trusted launcher updater:** implement signed metadata verification, trust anchoring, artifact binding, downgrade/replay protection, staged application, rollback, and key lifecycle procedures. Exit when adversarial update and recovery tests pass.
+- **5.3 — Security, diagnostics, and production release gate:** review the whole product, redact diagnostics, document support and migration boundaries, and resolve or explicitly accept release-blocking findings. Exit when the production checklist passes.
+
+**Phase 6**
+- **6.1 — Compatibility and conformance foundation:** stabilize migration tooling, compatibility policy, renderer/platform conformance tests, and support-matrix format. Exit when existing projects can be assessed and unsupported capabilities are reported accurately.
+- **6.2 — One evidence-backed expansion track:** select one justified track only (permissioned extensions, one additional renderer, one OS target, or one integration). Do not combine unrelated expansion bets into one assignment. Exit when the selected proof of concept meets its explicit security and compatibility criteria.
+- **6.3 — Validate, document, and support the selected expansion:** complete conformance, packaging, migration, performance, documentation, and maintenance ownership. Exit only when the feature is supportable, not merely demonstrable. Other candidate tracks remain separate future sequences.
+
+#### AI assignment and handoff contract
+
+Every AI assignment must contain:
+1. **Stage ID and objective:** exactly one stage from the ordered list above.
+2. **Prerequisites:** accepted prior-stage outputs and the exact contract/schema versions to use.
+3. **Owned paths:** files/directories the agent may change, plus explicitly forbidden shared paths.
+4. **Interfaces:** inputs, outputs, public APIs, and compatibility constraints.
+5. **Deliverables:** implementation, tests, documentation, and any migration notes required by that stage.
+6. **Exit gate:** measurable acceptance checks and commands/results required before handoff.
+7. **Handoff report:** changed paths, contract changes, tests run and results, known limitations, risks, and the next stage's prerequisites.
+
+An agent must not silently expand scope, redefine a shared contract, or begin a later stage. Contract changes require an explicit proposal and integration-owner approval. The integration owner assigns the next stage only after reviewing the handoff and confirming its exit gate. A single agent may handle consecutive stages, but each stage remains a separate reviewed handoff. Do not assign all stages to multiple agents simultaneously.
+
+Phase 6 is the exception to a single global sequence: after 6.1, separate expansion tracks may be evaluated independently, but each selected track still follows its own ordered 6.2 → 6.3 handoff and requires a named maintainer.
+
 ### 11.2 Phase 0 — De-risk the architecture
 
 **Outcome:** A documented, evidence-backed technical direction. No production product is promised in this phase.
