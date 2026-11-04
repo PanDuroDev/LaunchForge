@@ -2,7 +2,7 @@
 
 > **Status: DESIGN PROPOSAL — NOT AN APPROVED CONTRACT OR PRODUCTION UPDATER.**
 >
-> This proposal is a parallel architecture/research handoff. It does not enable self-updates, define a frozen Runtime API, or claim that Phase 5.1 has passed review. Adopt it only after the integration owner reviews the trust format and the 5.1 package/recovery boundary.
+> This proposal is a parallel architecture/research handoff. It does not enable self-updates or define a frozen Runtime API. Phase 5.1's publisher inventory validator has been merged, but that scoped tool does not by itself establish acceptance of the complete publisher signing, packaging, recovery, and production release gate. Adopt this proposal only after the integration owner reviews the trust format and the remaining 5.1 package/recovery boundary.
 
 ## 1. Decision summary
 
