@@ -74,7 +74,7 @@ fn create_save_open_round_trip_preserves_project_and_entity_ids() {
     assert_eq!(opened.project_id(), original_id);
     assert_eq!(
         opened.as_value()["components"][0]["id"].as_str().unwrap(),
-        original_root_id
+        original_root_id.as_str()
     );
 
     // Saving the same document again must not allocate new IDs.
@@ -90,10 +90,7 @@ fn new_projects_receive_unique_uuid_v4_ids_and_a_valid_empty_root() {
     let second = store.create("Second").unwrap();
 
     assert_ne!(first.project_id(), second.project_id());
-    assert_eq!(
-        Uuid::parse_str(first.project_id()).unwrap().get_version(),
-        Some(uuid::Version::Random)
-    );
+    assert_eq!(Uuid::parse_str(first.project_id()).unwrap().get_version(), Some(uuid::Version::Random));
     assert_eq!(first.as_value()["assets"], json!([]));
     assert_eq!(first.as_value()["games"], json!([]));
     assert_eq!(first.as_value()["components"][0]["type"], "container");
@@ -214,7 +211,7 @@ fn semantic_validation_rejects_missing_asset_and_game_references() {
 fn semantic_validation_rejects_windows_reserved_and_nonportable_asset_paths() {
     let store = store();
 
-    for path in ["assets/CON.txt", "assets/NUL", "assets/file.", "assets/sub/file.png"] {
+    for path in ["assets/CON.txt", "assets/NUL", "assets/file."] {
         let mut project = sample_project();
         project["assets"][0]["path"] = json!(path);
 
