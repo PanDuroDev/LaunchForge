@@ -1,0 +1,27 @@
+name: Phase 0 package verifier
+
+on:
+  pull_request:
+    paths:
+      - ".github/workflows/phase0-package-verifier.yml"
+      - "scripts/verify-phase0-portable.ps1"
+      - "scripts/tests/phase0-package-verifier.tests.ps1"
+      - "docs/PHASE0_CLEAN_MACHINE_VALIDATION.md"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  package-verifier:
+    runs-on: windows-2022
+    timeout-minutes: 10
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - name: Test package verifier with valid and hostile ZIP fixtures
+        shell: pwsh
+        run: .\scripts\tests\phase0-package-verifier.tests.ps1
