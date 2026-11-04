@@ -259,3 +259,11 @@ A passing workflow demonstrates catalog metadata/test-harness health only. It is
 The current candidate contract and evidence mapping is maintained in `docs/phase6/CONTRACT_TRACEABILITY.md`. Consult it before translating a planned case into an executable adapter. It distinguishes PR-branch proposals from accepted interfaces, maps Phase 6 case groups to Phase 0/1/2/4/5 candidate artifacts, and records coverage gaps that must be reconciled after the integration owner approves those artifacts.
 
 The traceability map is provisional. Do not encode candidate schema/API details into the stable conformance catalog or mark tests implemented until the referenced upstream contract is accepted.
+
+## 10. Latest prerequisite blockers (2026-11-04)
+
+- Phase 0 PR #16 Windows Actions run [#41919048099](https://github.com/PanDuroDev/LaunchForge/actions/runs/41919048099) passed contract/renderer tests and standalone export, but the Tauri host build failed because `poc/src-tauri/icons/icon.ico` was missing. The smoke-test, package and upload steps were skipped. Phase 6 must not treat Phase 0 as accepted until the upstream owner fixes and reruns the build, then records clean-machine/WebView2 evidence and approval.
+- Phase 4 PR #17 is POSIX-only and explicitly has no Windows backend. Its 40 local tests do not demonstrate Windows/NTFS path safety, reparse-point handling, real host process launch or power-loss recovery.
+- Phase 5 PR #18 records **FAIL / NO-GO** because the accepted Runtime/package, supported Windows baseline, updater, clean-machine install/recovery evidence and Runtime diagnostics integration are absent. PRs #14 and #15 remain unmerged QA/design contributions, not a production updater.
+
+These failures and boundaries keep executable Phase 6 product conformance, 6.2 expansion selection, and 6.3 support blocked. Do not lower the gate because isolated test suites pass on another OS or a reference prototype passes.
