@@ -80,7 +80,8 @@ class ConformanceCatalogTests(unittest.TestCase):
         self.assertEqual(uuid_case["category"], "project-format")
         self.assertEqual(uuid_case["lifecycle"], "planned")
         self.assertIn("phase0:project-format", uuid_case["contract_dependencies"])
-        self.assertIn("UUID canonicalization", uuid_case["expected_behavior"])
+        self.assertIn("lowercase UUIDv4", uuid_case["expected_behavior"])
+        self.assertIn("reject uppercase spellings", uuid_case["expected_behavior"])
 
         self.assertEqual(icon_case["category"], "project-format")
         self.assertEqual(icon_case["lifecycle"], "planned")
