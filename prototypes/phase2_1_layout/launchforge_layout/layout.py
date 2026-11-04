@@ -9,7 +9,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from enum import Enum
 from math import isfinite
-from typing import Sequence
+from typing import AbstractSet, Sequence
 
 _EPSILON = 1e-9
 
@@ -491,3 +491,30 @@ def layout_overlay(
         overflow_y = overflow_y or y < inner.y - _EPSILON or y + height > inner.bottom + _EPSILON
         items.append(PlacedItem(child.key, Rect(x, y, width, height)))
     return LayoutResult(tuple(items), overflow_x, overflow_y)
+
+
+def hit_test(
+    result: LayoutResult,
+    x: float,
+    y: float,
+    *,
+    interactive_keys: AbstractSet[str],
+) -> str | None:
+    """Return the topmost interactive child containing a logical point.
+
+    Layout results retain logical sibling order, with later siblings painted
+    above earlier siblings. Hit testing therefore walks placements in reverse
+    order and skips keys that are not interactive. Bounds use half-open edges
+    [left, right) and [top, bottom) so adjacent rectangles do not both claim
+    their shared boundary.
+    """
+
+    _finite("x", x)
+    _finite("y", y)
+    for item in reversed(result.items):
+        if item.key not in interactive_keys:
+            continue
+        bounds = item.bounds
+        if bounds.x <= x < bounds.right and bounds.y <= y < bounds.bottom:
+            return item.key
+    return None

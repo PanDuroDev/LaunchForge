@@ -13,6 +13,7 @@ from .layout import (
     PlacedItem,
     Rect,
     SizeMode,
+    hit_test,
     layout_overlay,
     layout_stack,
 )
@@ -30,6 +31,7 @@ __all__ = [
     "PlacedItem",
     "Rect",
     "SizeMode",
+    "hit_test",
     "layout_overlay",
     "layout_stack",
 ]
