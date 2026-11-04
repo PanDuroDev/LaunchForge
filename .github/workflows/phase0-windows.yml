@@ -36,9 +36,11 @@ jobs:
         shell: pwsh
         run: node .\poc\scripts\build-export.mjs
 
-      - name: Build Tauri Windows host
+      - name: Generate and verify Rust lockfile
         shell: pwsh
-        run: cargo build --release --manifest-path .\poc\src-tauri\Cargo.toml
+        run: |
+          cargo generate-lockfile --manifest-path .\poc\src-tauri\Cargo.toml
+          cargo build --locked --release --manifest-path .\poc\src-tauri\Cargo.toml
 
       - name: Smoke-test the standalone host process
         shell: pwsh
@@ -66,6 +68,7 @@ jobs:
           New-Item -ItemType Directory -Force -Path $package | Out-Null
           Copy-Item .\poc\src-tauri\target\release\launchforge_phase0_spike.exe $package
           Copy-Item .\poc\dist\BUILD-METADATA.json $package
+          Copy-Item .\poc\src-tauri\Cargo.lock (Join-Path $package "Cargo.lock")
           Compress-Archive -Path (Join-Path $package "*") -DestinationPath (Join-Path $env:RUNNER_TEMP "LaunchForge-Phase0-Portable.zip") -Force
 
       - name: Upload Windows build artifact
