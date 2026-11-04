@@ -172,13 +172,14 @@ impl ProjectValidator {
     }
 
     pub fn validate(&self, project: &Value) -> Result<(), ProjectError> {
-        if let Some(schema_version) = project.get("schemaVersion").and_then(Value::as_u64) {
-            if schema_version != PROJECT_SCHEMA_VERSION {
+        if let Some(schema_version) = project.get("schemaVersion").filter(|value| value.is_number()) {
+            if schema_version.as_u64() != Some(PROJECT_SCHEMA_VERSION) {
                 return Err(semantic_failure(
                     "UNSUPPORTED_SCHEMA_VERSION",
                     "$.schemaVersion",
                     format!(
-                        "Project schema version {schema_version} is not supported; version {PROJECT_SCHEMA_VERSION} is required and no automatic migration is available"
+                        "Project schema version {} is not supported; the exact integer version {PROJECT_SCHEMA_VERSION} is required and no automatic migration is available",
+                        schema_version
                     ),
                 ));
             }
