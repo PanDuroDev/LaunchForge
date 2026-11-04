@@ -37,6 +37,21 @@ Normative consequences proposed here:
 
 This reconciles the current v1 phrase "CSS pixels at the renderer's CSS-pixel coordinate system" with the Phase 2 specification's "logical UI units". The missing point is the explicit 1:1 definition and permission for fractional values in the new layout contract.
 
+## 2.1 Preview viewport presets
+
+Window presets are **Studio preview tooling**, not authored project layout data. They must not create a second responsive design, mutate child geometry, or silently rewrite the project's `window` settings.
+
+Proposed behavior:
+
+- Provide a small named desktop preview set plus a custom logical viewport size.
+- Use the Phase 2 specification's current baseline fixtures (960 × 600, 1280 × 720, and 1600 × 900 logical units) as initial candidate presets only. These are test/preview values, not a public Windows support guarantee until the integration owner confirms the supported baseline.
+- Test fractional/high-DPI presentation separately at 125%, 150%, and 200% while keeping the same logical viewport and saved geometry.
+- Selecting a preset changes only the Studio preview viewport. It does not modify `window.width`, `window.height`, project schema data, or child sizing constraints.
+- A custom viewport accepts finite positive logical dimensions within the limits the accepted Studio host declares. The host must reject unsupported or impractically large preview sizes with a visible diagnostic.
+- Layout resolves from the current parent content size; it does not depend on a particular monitor resolution.
+
+The authored `window` dimensions remain application-shell defaults/minimums. They are not responsive breakpoints and are not a substitute for container sizing rules. No preview-preset field is proposed for Project Schema v2.
+
 ## 3. Proposed Schema v2 shape
 
 The names below are proposed wire-format names, not approved identifiers.
