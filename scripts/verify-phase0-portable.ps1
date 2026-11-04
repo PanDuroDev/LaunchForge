@@ -261,7 +261,19 @@ try {
                 throw "The asset manifest contains a non-portable project asset path."
             }
             $assetFileName = $assetPath.Substring(7)
-            if ([regex]::IsMatch($assetFileName, '[^A-Za-z0-9._-]') -or
+            $hasInvalidFilenameCharacter = $false
+            foreach ($character in $assetFileName.ToCharArray()) {
+                $characterCode = [int] $character
+                $isAllowedCharacter = ($characterCode -ge 48 -and $characterCode -le 57) -or
+                    ($characterCode -ge 65 -and $characterCode -le 90) -or
+                    ($characterCode -ge 97 -and $characterCode -le 122) -or
+                    $characterCode -eq 45 -or $characterCode -eq 46 -or $characterCode -eq 95
+                if (-not $isAllowedCharacter) {
+                    $hasInvalidFilenameCharacter = $true
+                    break
+                }
+            }
+            if ($hasInvalidFilenameCharacter -or
                 $assetFileName.StartsWith(".") -or
                 $assetFileName.EndsWith(".")) {
                 throw "The asset manifest contains a non-portable Windows filename."
