@@ -530,221 +530,258 @@ A bounded technical spike may validate remote JSON or game download behavior, bu
 
 ## 11. Phased development roadmap
 
-The roadmap is release-oriented. Each release must produce a testable user outcome. Work packages inside a phase may run in parallel only after their contracts and ownership boundaries are approved.
+The roadmap is organized around **working product outcomes**, not technology layers. Every phase ends with a usable increment, a testable gate, and a decision about whether the next investment is justified.
 
-### Milestone overview
+Do not implement every subsystem just because it appears in the long-term vision. LaunchForge is a small-team product: the default path should stay narrow, and optional capabilities should remain optional.
 
-| Phase | Release outcome | Depends on |
-|---|---|---|
-| 0 — Validation and architecture | Evidence-backed stack, renderer, schema, and contracts | None |
-| 1 — End-to-end MVP | Create, edit, preview, export, run, and launch a local game entry | Phase 0 |
-| 2 — Authoring experience | More capable editor, layout, themes, assets, templates, project workflows | Phase 1 |
-| 3 — Data-driven launchers | Safe API/JSON connections, typed bindings, basic visual actions | Phases 1–2 |
-| 4 — Game operations | Install, verify, update, repair, and launch managed games | Phases 1 and 3 contracts |
-| 5 — Production distribution | Trusted launcher updates, signing/distribution readiness, hardening | Phases 1 and 4 as applicable |
-| 6 — Extensibility and platform expansion | Additional renderers, plugins, and OS targets based on demand | Stable Phase 5 foundation |
+### 11.1 Release sequence
 
-### Phase 0 — Validation and architecture decisions
+| Phase | Release | User-visible result | Depends on |
+|---|---|---|---|
+| 0 — De-risk the architecture | Internal spike | A proven technical direction and frozen contracts | None |
+| 1 — Prove the product | MVP / private preview | Create, edit, preview, export, run, and launch a local game | Phase 0 |
+| 2 — Make authoring practical | Studio beta | Build polished launchers with reusable layouts, assets, themes, and templates | Phase 1 |
+| 3 — Make content dynamic | Data beta | Display remote content and configure safe interactions | Phase 1; Phase 2 editor foundations |
+| 4 — Manage game delivery | Game-operations beta | Install, verify, update, repair, and launch managed games | Phase 1; Phase 3 network/security contracts where reused |
+| 5 — Ship and maintain reliably | Production release | Hardened packaging, publisher release workflow, trusted launcher updates | Phases 1–4 as applicable |
+| 6 — Expand deliberately | Expansion releases | Optional extensions, additional renderers, and additional OS targets | Stable Phase 5 foundation |
 
-**Goal / user outcome:** No end-user release. Remove the largest technical unknowns before implementation creates expensive coupling.
+Phase 3 and Phase 2 are separate tracks after Phase 1. The data/runtime contracts can be prototyped while Studio authoring improvements proceed, but the full Connection Builder depends on the editor's stable inspector and project workflows. Phase 4 may prototype its manifest and downloader independently, but must not bypass Phase 0 security contracts or Phase 1 Runtime boundaries.
 
-**Work packages**
-- **P0-A — Technology and renderer spike:** compare the serious host/renderer candidates using the same sample launcher and measurement protocol.
-- **P0-B — Project and component contracts:** define project schema, component metadata, layout primitives, asset references, schema versioning, and migration rules.
-- **P0-C — Runtime and host boundary:** define renderer-neutral Runtime APIs, capability profiles, permission boundaries, and preview/export parity contract.
-- **P0-D — Build and distribution spike:** prove a clean-machine standalone package with bundled dependencies and reproducible build metadata.
-- **P0-E — Security and test baseline:** threat model, credential classes, export scanning, network limits, path rules, diagnostics, and automated test strategy.
+### 11.2 Phase 0 — De-risk the architecture
 
-**Dependencies:** None. P0 work packages may run in parallel after a shared sample-project brief is agreed; P0-B and P0-C must be reviewed together.
-
-**Exclusions:** Production editor, production game downloader, multiple production renderers, updater, plugin system, and platform expansion.
-
-**Acceptance criteria / phase gate**
-- A written decision record compares candidates and includes raw PoC measurements and limitations.
-- One first-release renderer/host stack is selected with explicit reasons and fallback decision.
-- The same sample project renders and behaves consistently in preview and standalone export.
-- Project/component/runtime/build contracts are versioned and have test fixtures.
-- Capability negotiation and unsupported-feature behavior are demonstrated.
-- Security requirements are testable and assigned to the phases that implement them.
-- The architecture owner approves the contracts before Phase 1 implementation begins.
-
-**Main risks:** Over-generalizing the renderer abstraction; choosing a stack based on popularity; underestimating clean-machine packaging; creating contracts that are too broad for a solo developer.
-
-### Phase 1 — End-to-end Windows MVP
-
-**Goal / user outcome:** A developer can create and export one simple standalone launcher that displays a game entry and launches a local test game.
+**Outcome:** A documented, evidence-backed technical direction. No production product is promised in this phase.
 
 **Work packages**
-- **P1-A — Project schema and validation implementation:** project load/save, schema validation, stable IDs, asset references, compatibility metadata.
-- **P1-B — Minimal Studio shell/editor:** project workflow, component tree, inspector, add/remove/reorder, basic properties and undo/redo.
-- **P1-C — Renderer and preview:** first production renderer, component set, live preview, parity fixtures.
-- **P1-D — Runtime host and game launch:** standalone host, minimal Runtime APIs, configured local executable launch, safe error reporting.
-- **P1-E — Build/export and release smoke tests:** build CLI, bundled Runtime, package metadata, installer or portable output, clean-machine test.
+- **P0-A — Candidate shortlist:** compare Tauri + web UI, WebView2 + .NET, and Electron as the primary practical candidates. Consider WinUI 3, Avalonia, or Qt Quick only if the first three fail a concrete requirement. Do not benchmark every possible framework.
+- **P0-B — Responsibility and language map:** decide which layer owns Studio UI, privileged host operations, Runtime services, build tooling, and tests. Rust, C#, and TypeScript are candidates by responsibility, not a requirement to use all of them.
+- **P0-C — Project/component contract:** define the smallest schema needed by the MVP, stable IDs, typed properties, asset references, layout semantics, and version/migration policy.
+- **P0-D — Preview/export contract:** prove that preview and exported launcher use the same renderer and component implementation. Define capability checks only for real renderer-dependent features.
+- **P0-E — Build/distribution spike:** export and run a small launcher on a clean supported Windows machine.
+- **P0-F — Security and quality baseline:** threat model, credential classes, network limits, process-launch policy, path rules, diagnostics, and automated test strategy.
 
-**Parallelism:** P1-A owns the schema; other packages consume its frozen interfaces. P1-B and P1-C can proceed in parallel using mock fixtures. P1-D can build the host shell against the agreed component contract. P1-E starts once a minimal vertical slice exists. One integration owner controls shared contracts and assembles the end-to-end path.
+**Dependencies and parallelism:** P0-A/B can run together after agreeing on a single sample project. P0-C/D must be designed together. P0-E consumes a candidate stack and early contracts. P0-F reviews the proposed host/runtime boundaries. One architecture owner approves the final decisions.
 
-**Dependencies:** Phase 0 decisions and approved contracts.
+**Deliverables:** Decision records, PoC source, reproducible test scripts/raw measurements, schema v1, component and Runtime contracts, build interface, threat model, and a Phase 1 ownership map.
 
-**Exclusions:** Remote APIs, full game installation, updater, plugin system, multiple renderers, cloud services, and non-Windows targets.
+**Acceptance criteria**
+- A single Windows-first stack and one renderer are selected, with reasons and a fallback.
+- The same sample project runs in preview and as a standalone export.
+- A clean-machine package works without Studio or undeclared development dependencies.
+- The MVP schema and Runtime/build interfaces are small, documented, and covered by fixtures.
+- The architecture does not claim universal renderer portability; unsupported capabilities are reported explicitly.
+- Phase 1 work can proceed without competing definitions of shared contracts.
 
-**Acceptance criteria / phase gate**
-- The complete MVP journey in Section 10 passes on a clean supported Windows machine.
-- Preview/export parity tests pass for every MVP component and supported window behavior.
-- No project can request a Runtime capability that is not declared and validated.
-- Game launch is restricted to the configured executable and documented arguments.
-- Build diagnostics, structured logs, secret scanning, and recovery behavior pass tests.
-- A reproducible sample project and test procedure are committed.
+**Exclusions:** Production editor, game downloader, launcher updater, plugins, marketplace, cloud services, multiple production renderers, and non-Windows support.
 
-**Main risks:** Scope creep in the editor; schema churn; preview/runtime divergence; packaging surprises; unsafe process-launch behavior.
+**Main risks:** Spending too long comparing frameworks, designing an abstraction for hypothetical renderers, and selecting a stack from benchmark numbers that do not reflect the actual product.
 
-### Phase 2 — Authoring experience and reusable project workflows
+**Phase gate:** Stop technical exploration when one candidate satisfies the MVP requirements. Do not add another renderer unless a measured requirement forces it.
 
-**Goal / user outcome:** Developers can create more polished launchers efficiently and reuse approved work across projects.
+### 11.3 Phase 1 — Prove the product: end-to-end MVP
 
-**Scope**
-- Better layout primitives, alignment, anchors/constraints, responsive presets, and visual states.
-- More complete component property editing and component metadata tooling.
-- Asset library/import validation and theme management.
-- Starter templates (single-game, multi-game, minimal) built from supported components.
-- Project dashboard, duplicate/archive/import/export, and build history.
-- Improved keyboard accessibility, localization-ready strings, and RTL layout behavior in Studio and Runtime.
+**Outcome:** A developer can create a basic Launcher Project, edit a small interface, preview it, export a standalone Windows launcher, run it outside Studio, and launch a configured local game executable.
 
-**Dependencies:** Stable MVP schema, renderer contract, and export pipeline.
+**Work packages**
+- **P1-A — Project foundation:** create/open/save, schema validation, stable IDs, asset references, and compatibility metadata.
+- **P1-B — Minimal editor:** component tree, selection, inspector, add/remove/reorder, basic layout properties, and reliable undo/redo for supported edits.
+- **P1-C — Shared renderer and preview:** container, text, image, button, and game-entry components; preview at a small set of window sizes.
+- **P1-D — Runtime and local game launch:** standalone host, narrow permissioned APIs, configured executable and validated arguments, clear failure states.
+- **P1-E — Build/export:** deterministic build command, bundled Runtime/assets, app metadata, and one portable distribution format.
+- **P1-F — Integration/release gate:** sample project, parity tests, clean-machine tests, structured logs, diagnostics, and export secret scanning.
 
-**Exclusions:** Public template marketplace, cloud collaboration, arbitrary component scripting, and additional production renderers.
+**Critical path:** P0 contracts → P1-A schema → P1-C renderer/component contract → P1-D Runtime integration → P1-E export → P1-F clean-machine end-to-end gate. P1-B can develop against fixtures once P1-A freezes the minimum schema. P1-F is owned by the integration lead; it is not an optional final cleanup task.
 
-**Acceptance criteria / phase gate**
-- A user can create and customize the supported templates without editing project JSON.
-- Layout behavior is predictable at documented window sizes and DPI settings.
-- Project import/export and duplication preserve assets and stable references.
-- Keyboard workflows, focus states, Unicode, and RTL test cases pass for supported components.
+**MVP boundaries**
+- One game entry with local metadata and a publisher/user-configured executable.
+- Basic window title, icon, size, and resizability.
+- A single starter project and a small component set.
+- Basic navigation and local game-launch actions only.
+- One production renderer and one Windows output format.
 
-**Main risks:** Turning the editor into a general-purpose design tool; excessive layout freedom; inaccessible drag-only workflows; template/schema coupling.
+**Acceptance criteria**
+- A new user completes the whole journey without editing project JSON or source code.
+- Preview and export use the same renderer/components and pass defined parity tests.
+- The launcher runs independently on a clean supported Windows machine.
+- The game action can launch only the configured executable through the documented Runtime API.
+- Invalid projects, missing assets, unsupported features, and build failures have actionable diagnostics.
+- Secret scanning blocks export when prohibited credentials are detected.
+- The sample project and test procedure are reproducible from a clean checkout.
 
-### Phase 3 — Data connections and visual interactions
+**Exclusions:** Remote APIs, managed game downloads, repair/update workflows, launcher self-update, multiple renderers, arbitrary scripting, plugins, cloud sync, and non-Windows targets.
 
-**Goal / user outcome:** Launchers can show remotely managed content and respond to basic user interactions without embedding publisher secrets.
+**Main risks:** Editor scope creep, schema churn, preview/export drift, unsafe process launch, and packaging surprises.
 
-**Scope**
-- REST/HTTP JSON and static JSON adapters.
-- Connection test, sample response inspector, typed field mapping, defaults, optional values, and basic transformations.
-- Loading, empty, offline, stale-cache, and error states.
-- Constrained events/actions: navigation, notification, refresh data, open approved URL, set UI state.
-- Public endpoint and publisher-backend patterns; no private database access from the client.
-- Bounded network policies: connection/read timeouts, cancellation, size limits, redirect rules, and bounded retries.
-- Credential classification, secure storage rules, and fail-closed export scanning for secret-bearing values.
+**Phase gate:** Do not label the MVP complete because the editor or build command works in isolation. The complete clean-machine user journey must pass.
 
-**Dependencies:** Stable project schema and Runtime host API; Phase 2 editor workflows for a usable connection builder.
+### 11.4 Phase 2 — Make authoring practical: Studio beta
 
-**Exclusions:** Complex OAuth, arbitrary scripting, private database drivers, hosted LaunchForge backend, and unrestricted networking.
+**Outcome:** Developers can create a polished, reusable launcher without fighting the editor or editing project files manually.
 
-**Acceptance criteria / phase gate**
-- Sample and live JSON data render through typed bindings in preview and export.
-- Invalid mappings and malformed/oversized responses fail safely with actionable diagnostics.
-- Network policies are enforced and tested.
-- No publisher secret is serialized into the project or exported package.
-- Offline/cache behavior is documented and deterministic.
+**Work packages**
+- **P2-A — Layout and responsive behavior:** documented layout primitives, alignment, spacing, sizing, constraints, and a limited set of responsive/window presets.
+- **P2-B — Editing workflow:** multi-selection where justified, copy/paste/duplicate, grouping, visibility/locking, inspector quality, and predictable undo/redo.
+- **P2-C — Assets and themes:** asset import/library, validation, stable references, theme tokens, and reusable style presets.
+- **P2-D — Templates and project workflows:** single-game/multi-game/minimal templates; duplicate, archive, import/export, and project compatibility view.
+- **P2-E — Accessibility and localization:** keyboard workflows, focus behavior, Unicode, DPI/scaling, localization-ready strings, and RTL support for the supported component set.
 
-**Main risks:** Secret leakage, inconsistent API schemas, unbounded requests, confusing binding UX, and excessive action-system complexity.
+**Dependencies and parallelism:** Phase 1 schema and renderer must be stable. P2-A owns layout semantics; P2-B consumes them. P2-C and P2-D can run in parallel after asset/theme/template contracts are agreed. P2-E tests the actual UI and Runtime behavior throughout, not only at the end.
 
-### Phase 4 — Managed game installation and lifecycle
+**Acceptance criteria**
+- Users can build and modify the supplied templates without editing JSON.
+- Common layout changes are deterministic at documented window sizes and DPI settings.
+- Import, duplication, and export preserve assets and stable references.
+- Undo/redo, keyboard access, focus visibility, Unicode, and RTL behavior pass tests for supported controls.
+- Existing MVP projects open without silent layout or data changes.
 
-**Goal / user outcome:** A launcher can safely install, verify, update, repair, and launch a game distributed by its publisher.
+**Exclusions:** General-purpose design tooling, timeline animation, custom shaders, public marketplace, cloud collaboration, arbitrary component plugins, and extra production renderers.
 
-**Scope**
-- Versioned game manifest and publisher-owned distribution endpoint contract.
-- Download manager with progress, cancellation, bounded retries, and carefully scoped resume support.
-- Hash verification and explicit trust model for manifests/artifacts.
-- Install, verify, update, repair, and launch state machine.
-- Safe installation root and path confinement rules, including symlink/junction/reparse-point handling.
-- Recovery from interrupted downloads and updates.
-- Runtime UI state/events for install and update progress.
-- Test fixtures for malicious manifests, corrupted files, and interrupted operations.
+**Main risks:** Overbuilding the editor, introducing too many layout modes, and allowing templates to become incompatible with schema evolution.
 
-**Dependencies:** Standalone Runtime and build pipeline; data/network contracts where reused.
+**Phase gate:** Validate the editor with representative launcher tasks. Features that do not materially improve those tasks stay deferred.
 
-**Exclusions:** DRM, anti-cheat, payments, proprietary CDN, delta patching until measured need exists, privileged system-wide installs, and launcher self-update.
+### 11.5 Phase 3 — Make content dynamic: data and interactions
 
-**Acceptance criteria / phase gate**
-- A test game completes install, verification, update, repair, and launch.
-- Every write remains within the authorized install root, including under adversarial path/link tests.
-- Corrupted or unauthenticated content is rejected.
-- Interrupted operations recover without destroying the last valid installation.
-- Progress, cancellation, and error states remain accurate.
+**Outcome:** A launcher can display publisher-managed news, announcements, game metadata, and other remote JSON content with predictable failure behavior.
 
-**Main risks:** Filesystem escape, malicious manifests, storage exhaustion, partial-update corruption, and network instability.
+**Work packages**
+- **P3-A — Network/data adapter:** HTTPS JSON requests, cancellation, timeouts, response limits, redirect rules, and bounded retries.
+- **P3-B — Typed data model:** response inspection, field mapping, defaults, optional values, and limited safe transformations.
+- **P3-C — Connection Builder:** configure/test endpoints, inspect sample data, map fields, and preview with sample/live data.
+- **P3-D — UI states and actions:** loading/empty/offline/error/stale states; navigation, refresh, notifications, approved external links, and supported UI state changes.
+- **P3-E — Credential/export policy:** credential classification, secure storage where user credentials are required, secret redaction, and fail-closed export checks.
 
-### Phase 5 — Production distribution and launcher self-updates
+**Dependencies and parallelism:** Runtime/network contracts from Phase 0 and project/component contracts from Phase 1 are mandatory. P3-A/B can be prototyped with fixtures while Phase 2 proceeds. P3-C depends on the stable inspector and project workflows from Phase 2. P3-D depends on a frozen event/action contract. P3-E reviews all packages before release.
 
-**Goal / user outcome:** Publishers can distribute and maintain their launcher with a verifiable update process and predictable recovery.
+**Acceptance criteria**
+- Sample and live JSON data bind consistently in preview and exported launcher.
+- Invalid mappings, malformed/oversized responses, redirects, timeouts, and cancellation are handled safely.
+- Offline and stale-data behavior is documented and tested.
+- No publisher-side secret is embedded in project files or exported packages.
+- Actions are allowlisted and cannot invoke arbitrary shell, filesystem, or process access.
 
-**Scope**
-- Publisher identity and Windows signing/distribution guidance; signing infrastructure remains publisher-owned.
-- Signed release metadata with a client-held trust anchor and artifact binding.
-- Version and downgrade policy, key bootstrap/rotation/revocation design.
-- Separate launcher release channel and metadata from game releases.
-- Safe staging, verification, apply, restart, rollback/recovery, and interrupted-update handling.
-- Security review across project import, Studio, Runtime, network, game operations, build/export, and updater.
-- Crash diagnostics, sanitized support bundles, and release readiness checklist.
+**Exclusions:** Private database connections, arbitrary scripting, complex OAuth/provider ecosystem, hosted LaunchForge backend, and unrestricted networking.
 
-**Dependencies:** Stable standalone packaging and Runtime; Phase 4 trust primitives where shared.
+**Main risks:** Secret leakage, changing remote schemas, excessive transformation features, and preview/runtime behavior differences.
 
-**Exclusions:** LaunchForge-operated update/CDN hosting, mandatory paid code-signing service, automatic updates without publisher configuration, and broad platform expansion.
+**Phase gate:** A connection is not considered supported until the same fixtures and failure cases pass in Studio preview and exported Runtime.
 
-**Acceptance criteria / phase gate**
-- Invalid, missing, tampered, replayed, or unauthorized downgrade metadata is rejected.
-- A failed update leaves the prior launcher usable or provides a tested recovery path.
-- Key lifecycle and trust bootstrap are documented and tested in a controlled environment.
-- Publisher configuration clearly separates game updates from launcher updates.
-- Security findings have documented remediation or accepted risk owners.
+### 11.6 Phase 4 — Manage game delivery: game operations
 
-**Main risks:** Trust bootstrap, key loss/compromise, Windows reputation/signing cost, and destructive update failures.
+**Outcome:** A launcher can safely install, verify, update, repair, and launch a publisher's game.
 
-### Phase 6 — Extensibility and platform expansion
+**Work packages**
+- **P4-A — Distribution manifest:** versioned manifest, file metadata, integrity hashes, publisher trust model, and compatibility rules.
+- **P4-B — Download service:** bounded downloads, progress, cancellation, storage limits, and carefully scoped resume behavior.
+- **P4-C — Installation transaction engine:** staging, verification, safe commit, update/repair, rollback, and interrupted-operation recovery.
+- **P4-D — Runtime/UI integration:** game lifecycle API, state machine, progress, errors, and launch configuration.
+- **P4-E — Adversarial test suite:** malicious paths/archives, corrupted artifacts, disk exhaustion, interrupted operations, and reparse-point tests.
 
-**Goal / user outcome:** LaunchForge can support advanced workflows and additional platforms without weakening the stability of the default experience.
+**Dependencies and parallelism:** Phase 0 filesystem/network/security rules and Phase 1 Runtime/build contracts are mandatory. P4-A and P4-B can work against agreed fixtures in parallel. P4-C depends on their frozen contracts. P4-D consumes the lifecycle API. P4-E is involved from the first implementation, not after feature completion. Reuse Phase 3 transport code only where its trust and integrity model is sufficient; do not conflate content JSON with executable game distribution.
 
-**Scope candidates, each requiring a separate proposal and proof of concept**
-- Permissioned component/action extensions with explicit capability grants.
-- Additional renderer adapters (for example native Windows or another cross-platform renderer).
-- macOS/Linux Studio and exported launcher support.
-- Additional data adapters and publisher integrations.
-- Optional team workflows or cloud services only if validated by actual users.
+**Acceptance criteria**
+- A sample game completes install, verify, update, repair, and launch.
+- Manifest authenticity and artifact integrity are verified before installation.
+- All writes remain inside the authorized install root, including symlink/junction/reparse-point attack tests.
+- Failed or interrupted updates preserve the last valid installation or recover through a tested procedure.
+- Disk limits, cancellation, retries, and progress are accurate.
+- No administrator privilege is required for ordinary per-user installation.
 
-**Dependencies:** Stable schema/migrations, Runtime APIs, build pipeline, security model, and production release process.
+**Exclusions:** DRM, anti-cheat, payments, proprietary CDN, delta patching before evidence of need, privileged system-wide installation, and launcher self-update.
 
-**Exclusions:** Unrestricted plugins, arbitrary native code execution, automatic cross-renderer conversion, and platform promises without tested packaging and parity.
+**Main risks:** Filesystem escape, malicious archives, storage exhaustion, corrupted updates, and trust confusion between manifests and artifacts.
 
-**Acceptance criteria / phase gate**
-- Every extension declares versioned interfaces and explicit permissions.
-- Every renderer/platform has its own capability profile, parity suite, packaging tests, and performance measurements.
+**Phase gate:** Do not distribute this subsystem until adversarial path, integrity, and recovery tests pass.
+
+### 11.7 Phase 5 — Ship and maintain reliably: production release
+
+**Outcome:** Publishers can package and maintain launchers with clear release workflows, trusted application updates, and recoverable failures.
+
+**Work packages**
+- **P5-A — Production packaging:** installer/portable decision, application metadata, dependency inventory, clean-machine installation/uninstallation, and upgrade compatibility.
+- **P5-B — Publisher release workflow:** versioning, release channels, signing guidance, artifact publishing contract, and reproducible build metadata.
+- **P5-C — Launcher updater:** signed release metadata, client trust anchor, artifact binding, downgrade/replay protection, staged apply, rollback, and recovery.
+- **P5-D — Security and reliability review:** Studio import, Runtime permissions, networking, game operations, build/export, updater, logs, and dependency review.
+- **P5-E — Support readiness:** sanitized diagnostics, crash reporting policy (opt-in), release checklist, migration notes, and documented support boundaries.
+
+**Dependencies and parallelism:** Packaging and support readiness can begin after Phase 1 and mature through Phases 2–4. The updater must not ship before its trust and recovery contracts are approved and the Runtime packaging is stable. Game and launcher update channels must remain distinct.
+
+**Acceptance criteria**
+- Clean-machine install, upgrade, uninstall, and recovery tests pass on the supported Windows baseline.
+- Release artifacts have documented provenance and integrity checks; signing status is explicit.
+- Missing, invalid, tampered, replayed, or unauthorized downgrade metadata is rejected.
+- An interrupted/failed launcher update leaves the previous version usable or follows a tested recovery route.
+- Key bootstrap, rotation, revocation, and compromise response are documented.
+- Logs and diagnostic bundles redact secrets by default.
+- All release-blocking security findings are fixed or have an explicitly accepted owner and rationale.
+
+**Exclusions:** LaunchForge-operated CDN/backend, mandatory paid signing service, silent auto-update without publisher opt-in, and automatic multi-platform support.
+
+**Main risks:** Trust bootstrap, signing-key compromise/loss, Windows reputation costs, and update failures that make the launcher unusable.
+
+**Phase gate:** Do not enable production self-updates until signed metadata and recovery behavior pass adversarial tests on clean machines.
+
+### 11.8 Phase 6 — Expand deliberately
+
+**Outcome:** Add capabilities only when user demand and maintenance capacity justify their long-term cost.
+
+**Candidate tracks**
+- **P6-A — Permissioned extensions:** versioned extension API, explicit capability grants, isolation, revocation, and compatibility policy.
+- **P6-B — Additional renderers:** one adapter PoC at a time, using the same conformance suite and capability declarations.
+- **P6-C — Additional platforms:** evaluate Studio and exported Runtime separately for macOS/Linux; do not assume that supporting one implies the other.
+- **P6-D — Integrations and services:** additional data sources, publisher integrations, optional cloud/team workflows.
+- **P6-E — Compatibility and migration:** project/runtime migration tooling, support matrix, and deprecation policy.
+
+**Dependencies and parallelism:** Stable Phase 5 release process, schema migrations, Runtime API, security model, and named maintenance ownership. Each candidate track is independently prioritized; none is a prerequisite for another.
+
+**Acceptance criteria**
+- Extensions have explicit permissions, versioned contracts, and a tested isolation model.
+- Each renderer/platform passes conformance, accessibility, packaging, update, and performance tests.
 - Existing projects remain compatible or receive explicit migration/unsupported-feature diagnostics.
-- A feature is accepted only when a real use case justifies its maintenance cost.
+- Every added platform has separate Studio and Launcher support statements.
+- Each feature has demonstrated user demand and a maintainer.
+
+**Exclusions:** Unrestricted plugins, arbitrary native code execution, automatic cross-renderer conversion, unverified platform promises, marketplace, and cloud collaboration without evidence.
 
 **Main risks:** Compatibility fragmentation, plugin attack surface, platform-specific regressions, and support burden.
 
-### Cross-phase foundations
+**Phase gate:** A successful demo is insufficient. Require conformance, security, packaging, migration, and real user workflow evidence.
 
-These must be designed in Phase 0 and implemented incrementally:
+### 11.9 Dependency and parallel-work rules
 
-- Project schema, stable IDs, versioning, migration, and compatibility matrix.
-- Studio/Runtime/component/renderer/build contracts.
-- Capability profiles and unsupported-feature diagnostics.
-- Security model, credential classes, permissions, network limits, and path confinement.
-- Structured diagnostics, redaction, and reproducible test fixtures.
-- Accessibility, localization, Unicode, DPI, and RTL behavior.
-- Automated contract tests and clean-machine distribution tests.
+| Work | May proceed in parallel with | Must wait for |
+|---|---|---|
+| Phase 0 candidate PoCs | Security review and initial responsibility mapping | Shared sample and measurement protocol |
+| Phase 1 editor UI | Renderer/runtime implementation using fixtures | Frozen schema v1 and component contract |
+| Phase 2 assets/themes | Project workflow and accessibility test preparation | Stable project/asset references |
+| Phase 3 adapter/binding prototypes | Phase 2 editor improvements | Phase 0 network contract and Phase 1 Runtime boundary |
+| Phase 4 manifest/downloader prototypes | Separate test-fixture and threat-model work | Approved filesystem and trust rules |
+| Phase 5 packaging documentation | Support/diagnostic preparation | Known MVP package format |
+| Phase 6 candidate research | Other independent candidate tracks | Stable public contracts and named owners |
 
-### Decisions required before each phase
+**Integration rules**
+- One named architecture/integration owner controls shared schema, public APIs, dependency versions, and release gates.
+- Each work package lists owned paths, forbidden paths, public interfaces, tests, and handoff artifacts before implementation.
+- Two agents must not independently edit the same schema, renderer registry, Runtime API, or build pipeline.
+- Shared-contract changes require an explicit proposal, compatibility impact, migration note, and approval.
+- Every handoff includes changed paths, contract changes, tests run/results, known limitations, and next integration steps.
+- A phase is not complete when its code is merged; it is complete when its user-visible outcome and acceptance tests pass.
 
-| Before phase | Decisions that must be closed |
-|---|---|
-| 1 | First renderer/host, schema v1, component contract, Runtime APIs, build format, supported Windows baseline |
-| 2 | Layout model, template format, asset ownership, undo/redo model, localization and RTL strategy |
-| 3 | Supported auth modes, cache policy, mapping semantics, request limits, secret scanning rules |
-| 4 | Manifest trust, install-root ownership, archive policy, path/link handling, recovery guarantees |
-| 5 | Signing model, trust-anchor bootstrap, release metadata format, downgrade/rollback policy |
-| 6 | Extension permissions, renderer capability policy, platform support criteria, compatibility guarantees |
+### 11.10 Phase gate checklist
+
+Before starting a phase, confirm:
+1. Its user outcome is still valuable and in scope.
+2. Required contracts and dependencies are approved.
+3. Work packages have non-overlapping ownership.
+4. Test fixtures and integration owner are identified.
+5. Security and migration impacts are understood.
+
+Before closing a phase, confirm:
+1. Acceptance criteria pass on the supported environment.
+2. Preview/export or cross-module parity is tested where applicable.
+3. Failure, cancellation, and recovery paths are tested.
+4. Documentation, diagnostics, and migration notes are updated.
+5. Remaining risks have owners and explicit follow-up phases.
 
 ## 12. Operational requirements and integration contract
 
