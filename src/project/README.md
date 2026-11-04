@@ -7,7 +7,7 @@ This crate implements the P1-A project persistence boundary against the Phase 0 
 - Create an empty, valid project v1 starter with UUIDv4 identities.
 - Parse UTF-8 JSON and enforce the 1 MiB project-document limit.
 - Validate JSON Schema Draft 2020-12 using the repository-owned schema file at `poc/contracts/project-v1.schema.json`.
-- Enforce semantic invariants that need cross-entity inspection: canonical lowercase UUIDv4 IDs, typed application-icon references, asset/game references, root container, component count/depth, window minimums, portable asset filename rules, and duplicate asset paths.
+- Enforce semantic invariants that need cross-entity inspection: canonical lowercase UUIDv4 IDs, typed application-icon references, image-only references for image components and game covers, asset/game references, root container, component count/depth, window minimums, portable asset filename rules, and duplicate asset paths.
 - Open project files with validation.
 - Save validated projects through a same-directory temporary file and an atomic replacement operation.
 - Return optional metadata from document accessors so untrusted in-memory mutations cannot turn simple reads into panics.
