@@ -116,7 +116,7 @@ class ConformanceCatalogTests(unittest.TestCase):
         self.assertIn("phase5:package-contract", package["contract_dependencies"])
         self.assertIn("hostile archive entries", package["scenario"])
         self.assertIn("standard non-elevated Windows user", package["expected_behavior"])
-        self.assertIn("fresh-user clean-VM acceptance report", package["evidence_required"])
+        self.assertIn("separate fresh-user clean-VM acceptance report", package["evidence_required"])
 
     def test_dependency_registry_matches_case_references(self):
         """Require a unique registry containing every and only referenced dependency."""
