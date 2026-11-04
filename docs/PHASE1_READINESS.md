@@ -45,6 +45,45 @@ The following artifacts are required before their dependent implementation is sa
 
 A prose technology preference in the product plan is not a substitute for the Phase 0 decision record. Likewise, a draft schema or an unreviewed prototype API is not an approved contract.
 
+## Latest Phase 0 candidate snapshot (2026-11-04)
+
+A Phase 0 candidate is now available on the separate branch `phase0/de-risk-architecture` in [PR #16](https://github.com/PanDuroDev/LaunchForge/pull/16). These artifacts are useful implementation inputs, but their own status says they are **not approved for Phase 1 until integration-owner review**. They are not present on `main`.
+
+| Candidate artifact | Current location | Phase 1 use |
+|---|---|---|
+| ADR-0001 stack decision | `docs/phase-0/ADR-0001-stack-selection.md` | Tauri v2 + Rust host + TypeScript/React; WebView2 + .NET fallback |
+| Schema v1 | `poc/contracts/project-v1.schema.json` | Normative proposed project shape |
+| Semantic validator | `poc/shared/contract.mjs` | Cross-field and project-specific validation beyond JSON Schema |
+| Shared renderer | `poc/shared/renderer.mjs` | Host-neutral DOM renderer for preview/export |
+| Contract/security definition | `docs/phase-0/contracts-v1.md`, `docs/phase-0/threat-model.md` | Renderer, Runtime, build, trust, diagnostics, and migration boundaries |
+| Ownership map | `docs/phase-0/phase-1-handoff.md` | Proposed P1 paths, inputs, and package ownership |
+
+### Proposed v1 facts to consume, not redefine
+
+- Project documents use `format: "launchforge.project"` and `schemaVersion: 1`; `projectId` and all entity IDs are UUIDv4 strings unique across the document.
+- Top-level sections are `name`, `window`, `theme`, `assets`, `games`, and `components`, in addition to the format/version/ID fields.
+- Component types are `container`, `text`, `image`, `button`, and `gameCard`. Only containers have children; v1 has one root container, with bounded children and depth.
+- Asset references use stable IDs. Paths are project-relative and restricted to one file name under `assets/`; schema validation is not a substitute for canonicalized host-side containment and reparse-point checks.
+- Button actions are typed `navigate(target)` and `launchGame(gameId)`. The renderer never chooses an executable path or creates a process. The host resolves the game ID to a configured trusted launch target.
+- Preview and export are required to consume the same host-neutral renderer implementation. No arbitrary HTML/CSS/JS, remote data, generic network bridge, shell command, or unrestricted filesystem/process API is in the MVP.
+- The proposed build request selects target `windows-tauri-webview2` and `distribution: "portable"`; the result records schema/runtime/renderer versions, asset-manifest hash, artifact path, and diagnostics.
+
+These details are transcribed from the Phase 0 candidate contract. If the integration owner changes or rejects that proposal, Phase 1 must follow the accepted contract instead.
+
+### Phase 0.3 evidence status
+
+The first Windows Actions run for PR #16 is **failed**, not passed:
+
+- Workflow run: [#41918881904](https://github.com/PanDuroDev/LaunchForge/actions/runs/41918881904).
+- Job: `windows-build`.
+- Contract/renderer tests: **9 passed, 1 failed**.
+- The failing assertion is the SHA-256 comparison for the source sample project versus its exported copy in `poc/tests/phase0.test.mjs`.
+- Export, Tauri Windows build, main-window smoke test, and artifact upload were skipped after the failing test step.
+- The clean Windows VM, WebView2 parity, DPI/accessibility, and performance measurements remain outstanding.
+
+A report was posted to PR #16 with the exact failing run and job. Until the Windows workflow is repaired and the required clean-machine evidence is accepted (or explicitly waived by the integration owner), the candidate stack/contracts remain provisional.
+
+
 ## Phase 1 package readiness
 
 ### P1-A — Project foundation
@@ -66,7 +105,9 @@ A prose technology preference in the product plan is not a substitute for the Ph
 - Missing or escaping asset references are rejected according to the approved path policy.
 - Stable IDs remain stable across save/reopen and supported edits.
 
-**Status:** Blocked on schema, asset, versioning, and path contracts.
+**Candidate contract mapping:** PR #16 proposes schema v1 at `poc/contracts/project-v1.schema.json`, with semantic checks in `poc/shared/contract.mjs`. P1-A should load and save the exact v1 shape, preserve UUIDv4 IDs, reject unknown schema versions/fields and malformed or oversized documents, validate references between component/game/asset IDs, and retain asset identity across round trips. Do not copy the schema or semantic rules into a second definition.
+
+**Status:** Candidate inputs exist on the Phase 0 branch; implementation acceptance remains blocked on integration-owner approval and Phase 0.3 evidence.
 
 ### P1-B — Minimal editor
 
@@ -86,7 +127,9 @@ A prose technology preference in the product plan is not a substitute for the Ph
 - Add/remove/reorder/property edits serialize and reopen correctly.
 - Undo/redo restores both editor state and project data for supported operations.
 
-**Status:** Blocked on the selected Studio stack and the P1-A schema/component fixtures.
+**Candidate contract mapping:** The editor consumes the v1 component types `container`, `text`, `image`, `button`, and `gameCard`. The current contract has one root container and no general-purpose absolute positioning. UI actions remain typed navigation or `launchGame(gameId)`; executable paths and command strings are not editor properties.
+
+**Status:** Candidate stack and component definitions exist on the Phase 0 branch; implementation acceptance remains blocked on the approved schema and integration owner.
 
 ### P1-C — Shared renderer and preview
 
@@ -107,7 +150,9 @@ A prose technology preference in the product plan is not a substitute for the Ph
 - Missing/unsupported component and asset cases are diagnosable.
 - Preview and exported output pass the same defined component fixtures and parity checks.
 
-**Status:** Blocked on the renderer/component contracts and selected renderer.
+**Candidate contract mapping:** PR #16 proposes `RendererAdapter` with `id`, `contractVersion: 1`, `validate(project)`, and `render(project, mount, context)`. The renderer package must remain host-neutral; host privileges are represented only by typed actions/diagnostics in its context.
+
+**Status:** A DOM proof-of-concept exists on the Phase 0 branch, but the Windows preview/export and native-host proof has not passed.
 
 ### P1-D — Standalone Runtime and local game launch
 
@@ -129,7 +174,9 @@ A prose technology preference in the product plan is not a substitute for the Ph
 - Invalid paths, unavailable executables, denied permissions, and invalid arguments fail safely with actionable diagnostics.
 - The Runtime does not execute a different target through shell or URL-handler behavior.
 
-**Status:** Blocked on the Runtime API, process-launch policy, and selected host/runtime technology.
+**Candidate contract mapping:** The renderer emits only `launchGame(gameId)`; the Rust host resolves that ID to a preconfigured trusted executable and arguments. The UI must not supply executable paths or arbitrary command lines. Window settings are limited to the validated title, default/minimum dimensions, and resizable flag.
+
+**Status:** The host boundary is documented in the Phase 0 candidate, but the actual Runtime resolver, first-run target configuration, canonical path/reparse-point enforcement, and Windows tests do not exist yet.
 
 ### P1-E — Deterministic build/export
 
@@ -153,7 +200,9 @@ A prose technology preference in the product plan is not a substitute for the Ph
 - The export scan fails closed when it detects a secret. Its diagnostics identify the offending configuration without printing the secret value.
 - The output launches without Studio or undeclared development dependencies.
 
-**Status:** Blocked on the build interface, output-format decision, Runtime contract, and security rules.
+**Candidate contract mapping:** PR #16 proposes `BuildRequestV1` with `projectPath`, target `windows-tauri-webview2`, `outputDirectory`, and `distribution: "portable"`. The corresponding result includes build ID, artifact path, project schema version, Runtime version, renderer ID/contract version, asset-manifest SHA-256, and diagnostics.
+
+**Status:** The portable format is a proposed choice, but the actual native package has not built or passed clean-machine deployment. Secret scanning and deterministic packaging are not implemented by the Phase 0 browser-only spike.
 
 ### P1-F — Integration and end-to-end release gate
 
@@ -177,7 +226,9 @@ A prose technology preference in the product plan is not a substitute for the Ph
 - Invalid projects, missing assets, unsupported features, build errors, and prohibited secrets produce actionable blocking diagnostics.
 - Logs and diagnostic bundles redact tokens, credentials, personal data, and sensitive filesystem paths.
 
-**Status:** Blocked on the integration owner, all prior package handoffs, and clean-machine test infrastructure.
+**Current evidence:** The first PR #16 Windows workflow failed in the sample-project source/export hash assertion (9/10 tests passed); all native build/smoke/package steps were skipped. No clean Windows VM result or accepted integration owner/waiver is recorded.
+
+**Status:** Blocked on the integration owner, accepted contracts, repaired Windows CI, all prior package handoffs, and clean-machine test infrastructure.
 
 ## Suggested ownership boundaries
 
