@@ -52,3 +52,37 @@ The selected capability must pass its security, migration, accessibility, packag
 ## Current decision
 
 Continue to hold executable product conformance, 6.2 selection and 6.3 support. The next blocker-removal action is Phase 0 PR #16's Windows Tauri build failure and integration-owner approval; Phase 4/5 platform and release gates must then be completed in their own reviewed stages. Do not use another prototype or a green catalog workflow as a waiver.
+
+
+## 2026-11-05 continuation update
+
+This update supersedes the older blocker chronology above where it refers to the latest Phase 0 Windows workflow.
+
+### Phase 6 status
+
+- The catalog now contains **41 planned cases**, 40 unique dependency labels and 16 metadata unit tests. New coverage tracks UUID/schema agreement, application-icon packaging, typed data mappings, host-enforced network egress and portable Windows package verification.
+- Every case remains `planned`. The catalog workflow validates metadata only; it does not establish product support.
+- PR #11 (catalog foundation) and PR #19 (handoff refresh) are already merged. No further Phase 6 PR has been merged by this continuation.
+
+### What changed upstream
+
+1. **Phase 0 PR #16:** the latest Windows workflow [#41924747295](https://github.com/PanDuroDev/LaunchForge/actions/runs/41924747295) passed every step, including Tauri build, host smoke, portable ZIP packaging and upload. This supersedes the earlier ICO-fixture failure note. PR #16 is still open/unmerged and its candidate contracts are not approved. The run does not cover fresh-user VM acceptance, actual WebView2 preview/export parity, DPI/accessibility/RTL, or performance.
+2. **Phase 0 verifier PR #23:** an earlier hosted fixture run passed, but the latest PR-head run [#41926599380](https://github.com/PanDuroDev/LaunchForge/actions/runs/41926599380) failed in the verifier test step. Review findings remain open. Resolve the current test/procedure findings and rerun on the current head before treating hosted validation as green. Fresh-user clean-VM acceptance remains separate.
+3. **Phase 1 PR #22:** remains a draft. The Rust P1-A test suite has not been run; its successful Phase 0 workflow is not evidence that the new Rust crate compiles or passes.
+4. **Phase 3 PR #21:** Stage 3.1 is merged. It is still a renderer-neutral transport/mapping prototype, not integrated Studio/Runtime behavior and not a DNS/IP egress defense.
+5. **Phase 4 PR #25:** the current transaction/lifecycle prototype is POSIX-only. A Windows/NTFS backend, reparse-point tests and native Runtime integration remain necessary.
+6. **Phase 5:** PRs #14 and #18 are merged; PR #18 continues to declare production **FAIL / NO-GO**. PR #15 is still a TUF design proposal, not an updater.
+
+### Ordered next actions
+
+| Order | Owner | Required exit evidence before Phase 6 consumes the result |
+|---|---|---|
+| 1 | Phase 0 / integration owner | Review/approve PR #16 contracts and ADR; complete fresh-user Windows x64/WebView2 validation, preview/export interaction parity, 100/150/200% DPI, keyboard/focus, Unicode/RTL, accessibility and reproducible performance measurements. |
+| 2 | Phase 0 verifier owner | Resolve PR #23's outstanding review findings, pass the latest-head verifier workflow, verify the outer artifact/inner package extraction procedure, and retain a fresh standard-user Windows VM report. |
+| 3 | Phase 1 owner | Run the P1-A Rust tests on the selected toolchain; integrate project persistence against the approved schema and demonstrate a supported Studio/Runtime/build path. |
+| 4 | Phase 2/3 owners | Accept the layout/data/action/credential semantics actually used by supported projects; add host DNS/IP egress enforcement and Preview/Runtime fixture evidence where data capabilities are included. |
+| 5 | Phase 4 owner | Approve manifest/lifecycle boundaries; provide a Windows-safe transaction backend, NTFS reparse-point protections, native Runtime integration and Windows interruption/recovery evidence. |
+| 6 | Phase 5 owner | Clear the documented FAIL / NO-GO findings; accept package/release/trust interfaces, implement and test the updater/recovery path, integrate diagnostics with Runtime, and assign release authority. |
+| 7 | Phase 6 integration owner | Confirm fixture ownership, exact supported tuples, reviewed contracts, evidence retention and a named maintainer. Then execute 6.1. Only after a reviewed 6.1 exit may one evidence-backed 6.2 track be selected. |
+
+No expansion track is selected. No user-demand record or maintenance owner is present. Keep 6.2 and 6.3 deferred; do not invent an expansion to fill the schedule.
