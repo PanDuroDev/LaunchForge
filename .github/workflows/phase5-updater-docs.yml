@@ -29,7 +29,7 @@ jobs:
 
           matrix = Path("docs/LAUNCHER_UPDATE_CONFORMANCE_MATRIX.md").read_text(encoding="utf-8")
           proposal = Path("docs/LAUNCHER_UPDATE_TRUST_PROPOSAL.md").read_text(encoding="utf-8")
-          ids = re.findall(r"^\\|\\s*([A-Z]{2,4}-\\d+[A-Z]?)\\s*\\|", matrix, re.MULTILINE)
+          ids = re.findall(r"^\|\s*([A-Z]{2,4}-\d+[A-Z]?)\s*\|", matrix, re.MULTILINE)
           if not ids:
               raise SystemExit("No conformance case IDs found.")
           duplicates = sorted({item for item in ids if ids.count(item) > 1})
