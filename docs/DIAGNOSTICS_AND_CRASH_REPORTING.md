@@ -15,7 +15,7 @@ The machine-readable contract is [diagnostic-event-v1.schema.json](../schemas/di
 | \`timestamp_utc\` | Valid RFC 3339 UTC timestamp ending in \`Z\` |
 | \`severity\` | debug, info, warning, error, critical |
 | \`component\` | studio, runtime, launcher_updater, game_delivery, packager, bootstrapper |
-| \`event_code\` | Fixed registry only: LF_APP_START_FAILED, LF_BOOTSTRAP_FAILED, LF_CONNECTION_FAILED, LF_EXPORT_FAILED, LF_GAME_INSTALL_FAILED, LF_GAME_LAUNCH_FAILED, LF_GAME_REPAIR_FAILED, LF_GAME_UPDATE_FAILED, LF_GAME_VERIFY_FAILED, LF_PROJECT_LOAD_FAILED, LF_PROJECT_SAVE_FAILED, LF_RECOVERY_REQUIRED, LF_RECOVERY_SUCCEEDED, LF_UPDATE_CHECK_FAILED, LF_UPDATE_FAILED, LF_UPDATE_ROLLBACK, LF_UPDATE_SUCCEEDED |
+| \`event_code\` | No approved Runtime/Studio event-code registry exists yet. The reference exporter rejects every record until a reviewed, versioned registry is supplied; it does not invent event identifiers. |
 | \`outcome\` | started, completed, failed, cancelled, recovered, recovery_failed |
 | \`error_code\` | Fixed LaunchForge error-code registry only |
 | \`operation_stage\` | Fixed operation-stage registry only |
@@ -25,7 +25,7 @@ The machine-readable contract is [diagnostic-event-v1.schema.json](../schemas/di
 | \`metadata_role\` | root, targets, snapshot, timestamp |
 | \`correlation_id\` | Random UUID version 4 only; UUID versions that can embed host/device identifiers are rejected |
 
-Unknown fields or invalid values cause the **entire record to be omitted**. The exporter does not attempt to redact arbitrary free-form strings and then keep the rest of that record.
+Unknown fields or invalid values cause the **entire record to be omitted**. Because there is not yet an authoritative event-code source of truth in the accepted Runtime/Studio baseline, the v1 reference exporter currently exports no records; adding event codes requires a reviewed producer registry and synchronized schema update. The exporter does not attempt to redact arbitrary free-form strings and then keep the rest of that record.
 
 ## Never collect or export by default
 
