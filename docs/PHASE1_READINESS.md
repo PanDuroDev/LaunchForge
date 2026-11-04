@@ -124,6 +124,7 @@ A prose technology preference in the product plan is not a substitute for the Ph
 
 **Exit evidence:**
 - Runtime starts independently of Studio.
+- The Runtime applies the approved window title, icon, default/minimum size, and resize behavior.
 - Valid project configuration starts the configured test executable.
 - Invalid paths, unavailable executables, denied permissions, and invalid arguments fail safely with actionable diagnostics.
 - The Runtime does not execute a different target through shell or URL-handler behavior.
@@ -148,7 +149,8 @@ A prose technology preference in the product plan is not a substitute for the Ph
 - Repeated builds from identical inputs produce equivalent package contents and recorded build metadata.
 - Required Runtime and assets are bundled.
 - Missing assets, unsupported capabilities, and build failures block export with useful diagnostics.
-- The export scan fails closed on prohibited credentials without printing secret values.
+- The export scan checks resolved build inputs and the final package for known secret-bearing fields and configured secret patterns.
+- The export scan fails closed when it detects a secret. Its diagnostics identify the offending configuration without printing the secret value.
 - The output launches without Studio or undeclared development dependencies.
 
 **Status:** Blocked on the build interface, output-format decision, Runtime contract, and security rules.
@@ -173,6 +175,7 @@ A prose technology preference in the product plan is not a substitute for the Ph
 - The exported package runs outside Studio on a clean supported Windows environment.
 - The configured local executable launches through the documented Runtime API.
 - Invalid projects, missing assets, unsupported features, build errors, and prohibited secrets produce actionable blocking diagnostics.
+- Logs and diagnostic bundles redact tokens, credentials, personal data, and sensitive filesystem paths.
 
 **Status:** Blocked on the integration owner, all prior package handoffs, and clean-machine test infrastructure.
 
