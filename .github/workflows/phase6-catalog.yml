@@ -4,6 +4,7 @@ on:
   pull_request:
     paths:
       - "conformance/**"
+      - "docs/phase6/**"
       - "tools/validate_conformance_catalog.py"
       - "tests/test_phase6_catalog.py"
       - ".github/workflows/phase6-catalog.yml"
