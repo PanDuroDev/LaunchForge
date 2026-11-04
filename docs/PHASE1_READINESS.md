@@ -67,6 +67,7 @@ A Phase 0 candidate is now available on the separate branch `phase0/de-risk-arch
 - Button actions are typed `navigate(target)` and `launchGame(gameId)`. The renderer never chooses an executable path or creates a process. The host resolves the game ID to a configured trusted launch target.
 - Preview and export are required to consume the same host-neutral renderer implementation. No arbitrary HTML/CSS/JS, remote data, generic network bridge, shell command, or unrestricted filesystem/process API is in the MVP.
 - The proposed build request selects target `windows-tauri-webview2` and `distribution: "portable"`; the result records schema/runtime/renderer versions, asset-manifest hash, artifact path, and diagnostics.
+- **Open contract gap:** the product plan requires an application icon, but the candidate v1 project schema has no icon property and the proposed build request/result has no icon/application-metadata field. Phase 0 must define an approved icon reference and portable-package behavior or record an explicit product-owner-approved deferral. Phase 1 must not invent the field.
 
 These details are transcribed from the Phase 0 candidate contract. If the integration owner changes or rejects that proposal, Phase 1 must follow the accepted contract instead.
 
@@ -202,7 +203,7 @@ A report was posted to PR #16 with the exact failing run and job. Until the Wind
 
 **Candidate contract mapping:** PR #16 proposes `BuildRequestV1` with `projectPath`, target `windows-tauri-webview2`, `outputDirectory`, and `distribution: "portable"`. The corresponding result includes build ID, artifact path, project schema version, Runtime version, renderer ID/contract version, asset-manifest SHA-256, and diagnostics.
 
-**Status:** The portable format is a proposed choice, but the actual native package has not built or passed clean-machine deployment. Secret scanning and deterministic packaging are not implemented by the Phase 0 browser-only spike.
+**Status:** The portable format is a proposed choice, but the actual native package has not built or passed clean-machine deployment. Secret scanning and deterministic packaging are not implemented by the Phase 0 browser-only spike. Application-icon metadata is also missing from the proposed project/build contracts and must be resolved before claiming the product-plan window/icon requirements pass.
 
 ### P1-F — Integration and end-to-end release gate
 
