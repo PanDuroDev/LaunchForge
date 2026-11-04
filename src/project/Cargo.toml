@@ -2,7 +2,7 @@
 name = "launchforge-project"
 version = "0.1.0"
 edition = "2024"
-rust-version = "1.85"
+rust-version = "1.89"
 publish = false
 description = "Phase 1 project persistence and schema validation for LaunchForge"
 
