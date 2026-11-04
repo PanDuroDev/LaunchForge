@@ -36,6 +36,25 @@ _ALLOWED_FIELDS = _REQUIRED_FIELDS | _OPTIONAL_FIELDS
 _SEVERITIES = {"debug", "info", "warning", "error", "critical"}
 _COMPONENTS = {"studio", "runtime", "launcher_updater", "game_delivery", "packager", "bootstrapper"}
 _OUTCOMES = {"started", "completed", "failed", "cancelled", "recovered", "recovery_failed"}
+_EVENT_CODES = {
+    "LF_APP_START_FAILED",
+    "LF_BOOTSTRAP_FAILED",
+    "LF_CONNECTION_FAILED",
+    "LF_EXPORT_FAILED",
+    "LF_GAME_INSTALL_FAILED",
+    "LF_GAME_LAUNCH_FAILED",
+    "LF_GAME_REPAIR_FAILED",
+    "LF_GAME_UPDATE_FAILED",
+    "LF_GAME_VERIFY_FAILED",
+    "LF_PROJECT_LOAD_FAILED",
+    "LF_PROJECT_SAVE_FAILED",
+    "LF_RECOVERY_REQUIRED",
+    "LF_RECOVERY_SUCCEEDED",
+    "LF_UPDATE_CHECK_FAILED",
+    "LF_UPDATE_FAILED",
+    "LF_UPDATE_ROLLBACK",
+    "LF_UPDATE_SUCCEEDED",
+}
 _ERROR_CODES = {
     "LF_IO_DENIED", "LF_NETWORK_TIMEOUT", "LF_NETWORK_TLS", "LF_METADATA_EXPIRED",
     "LF_METADATA_SIGNATURE", "LF_METADATA_ROLLBACK", "LF_TARGET_HASH",
@@ -52,14 +71,11 @@ _METADATA_ROLES = {"root", "targets", "snapshot", "timestamp"}
 _PLATFORMS = {"windows-x64", "windows-arm64"}
 _VERSION_RE = re.compile(
     r"^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)"
-    r"(?:-(?:0|[1-9][0-9]*|[0-9A-Za-z-]*[A-Za-z-][0-9A-Za-z-]*)"
-    r"(?:\.(?:0|[1-9][0-9]*|[0-9A-Za-z-]*[A-Za-z-][0-9A-Za-z-]*))*)?"
-    r"(?:\+[0-9A-Za-z-]+(?:\.[0-9A-Za-z-]+)*)?$"
+    r"(?:-(?:alpha|beta|preview|rc)(?:\.(?:0|[1-9][0-9]*))?)?$"
 )
-_EVENT_CODE_RE = re.compile(r"^LF_[A-Z0-9_]{1,60}$")
 _TIMESTAMP_RE = re.compile(r"^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{1,6})?Z$")
 _CORRELATION_RE = re.compile(
-    r"^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
+    r"^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
 )
 
 
@@ -108,8 +124,13 @@ def _valid_timestamp(value: Any) -> bool:
 
 
 def _valid_version(value: Any) -> bool:
-    """Accept a SemVer string without arbitrary metadata or free-form suffixes."""
+    """Accept core SemVer with only approved prerelease labels and no build metadata."""
     return isinstance(value, str) and len(value) <= 128 and bool(_VERSION_RE.fullmatch(value))
+
+
+def _allowed_string(value: Any, allowed: set[str]) -> bool:
+    """Return True only when a value is a string in the supplied fixed registry."""
+    return isinstance(value, str) and value in allowed
 
 
 def sanitize_record(record: Any) -> dict[str, Any] | None:
@@ -124,13 +145,13 @@ def sanitize_record(record: Any) -> dict[str, Any] | None:
         return None
     if not _valid_timestamp(record["timestamp_utc"]):
         return None
-    if record["severity"] not in _SEVERITIES:
+    if not _allowed_string(record["severity"], _SEVERITIES):
         return None
-    if record["component"] not in _COMPONENTS:
+    if not _allowed_string(record["component"], _COMPONENTS):
         return None
-    if not isinstance(record["event_code"], str) or not _EVENT_CODE_RE.fullmatch(record["event_code"]):
+    if not _allowed_string(record["event_code"], _EVENT_CODES):
         return None
-    if record["outcome"] not in _OUTCOMES:
+    if not _allowed_string(record["outcome"], _OUTCOMES):
         return None
 
     safe = {
@@ -142,19 +163,19 @@ def sanitize_record(record: Any) -> dict[str, Any] | None:
         "outcome": record["outcome"],
     }
     if "error_code" in record:
-        if record["error_code"] not in _ERROR_CODES:
+        if not _allowed_string(record["error_code"], _ERROR_CODES):
             return None
         safe["error_code"] = record["error_code"]
     if "operation_stage" in record:
-        if record["operation_stage"] not in _OPERATION_STAGES:
+        if not _allowed_string(record["operation_stage"], _OPERATION_STAGES):
             return None
         safe["operation_stage"] = record["operation_stage"]
     if "metadata_role" in record:
-        if record["metadata_role"] not in _METADATA_ROLES:
+        if not _allowed_string(record["metadata_role"], _METADATA_ROLES):
             return None
         safe["metadata_role"] = record["metadata_role"]
     if "platform" in record:
-        if record["platform"] not in _PLATFORMS:
+        if not _allowed_string(record["platform"], _PLATFORMS):
             return None
         safe["platform"] = record["platform"]
     for version_field in ("app_version", "runtime_version"):
@@ -209,7 +230,7 @@ def sanitize_jsonl(raw: bytes) -> tuple[bytes, SanitizeStats]:
                 parse_float=_reject_float,
             )
             safe = sanitize_record(record)
-        except (UnicodeDecodeError, json.JSONDecodeError, BundleError, RecursionError, ValueError, TypeError):
+        except (UnicodeDecodeError, json.JSONDecodeError, BundleError, RecursionError, ValueError):
             safe = None
         if safe is None:
             dropped_records += 1
