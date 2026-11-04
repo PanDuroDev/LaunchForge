@@ -103,7 +103,6 @@ class Insets:
 
 @dataclass(frozen=True, slots=True)
 class AxisSpec:
-    """Sizing mode, weight or fixed value, and optional bounds."""
     """A dimension request with optional minimum and maximum bounds.
 
     For FILL, value is the positive flex weight. For FIXED it is the requested
