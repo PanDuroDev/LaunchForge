@@ -40,7 +40,7 @@ Unsigned local preview builds require an explicit override:
 python tools/release/validate_inventory.py .\dist --allow-unsigned
 ```
 
-The override is rejected for stable releases and must never appear in a production publishing job. The validator checks structure, paths, lengths and hashes. It does **not** verify Authenticode signatures, certificate chains, GitHub attestations, SBOMs or updater trust. A `signed` JSON value is an assertion, not cryptographic proof.
+The override is rejected for stable releases and must never appear in a production publishing job. Both `unsigned` and `not-applicable` signing states are rejected for stable artifacts; a Windows launcher installer must have a signed and timestamped publisher identity. A stable inventory is not allowed to encode a signing exemption. The validator checks structure, paths, lengths and hashes. It does **not** verify Authenticode signatures, certificate chains, GitHub attestations, SBOMs or updater trust. A `signed` JSON value is an assertion, not cryptographic proof.
 
 Run it in an isolated release workspace that the validator's process exclusively controls. The filesystem checks reject links/reparse points observed during validation; this local QA tool is not a defense against a concurrent process that can mutate the release directory while it is being checked.
 
