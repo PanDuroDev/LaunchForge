@@ -52,6 +52,21 @@ class StackLayoutTests(unittest.TestCase):
         self.assertAlmostEqual(result.by_key("secondary").x, 176)
         self.assertAlmostEqual(result.by_key("secondary").width, 128)
 
+    def test_mixed_fill_minimum_and_maximum_redistribute_correctly(self):
+        result = layout_stack(
+            Rect(0, 0, 100, 40),
+            [
+                LayoutChild("minimum", AxisSpec.fill(minimum=80), AxisSpec.fill()),
+                LayoutChild("maximum", AxisSpec.fill(maximum=30), AxisSpec.fill()),
+                LayoutChild("remaining", AxisSpec.fill(), AxisSpec.fill()),
+            ],
+            axis=Axis.HORIZONTAL,
+        )
+        self.assertEqual(result.by_key("minimum").width, 80)
+        self.assertEqual(result.by_key("maximum").width, 10)
+        self.assertEqual(result.by_key("remaining").width, 10)
+        self.assertFalse(result.overflow_x)
+
     def test_fill_maximum_releases_space_to_other_fill_children(self):
         result = layout_stack(
             Rect(0, 0, 300, 50),
@@ -199,6 +214,25 @@ class StackLayoutTests(unittest.TestCase):
             layout_stack(
                 Rect(0, 0, 10, 10), [], axis=Axis.HORIZONTAL, gap=-1
             )
+
+    def test_capped_fill_child_honors_center_and_end_cross_alignment(self):
+        for alignment, expected_y in (
+            (Alignment.CENTER, 35),
+            (Alignment.END, 70),
+        ):
+            with self.subTest(alignment=alignment):
+                result = layout_stack(
+                    Rect(0, 0, 200, 100),
+                    [LayoutChild(
+                        "child",
+                        AxisSpec.fixed(40),
+                        AxisSpec.fill(maximum=30),
+                    )],
+                    axis=Axis.HORIZONTAL,
+                    align_items=alignment,
+                )
+                self.assertEqual(result.by_key("child").height, 30)
+                self.assertEqual(result.by_key("child").y, expected_y)
 
     def test_stretch_respects_cross_axis_maximum(self):
         result = layout_stack(
