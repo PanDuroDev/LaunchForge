@@ -40,6 +40,7 @@
 | REL-007 | Beta/preview is offered to a stable installation | Do not silently switch channels |
 | REL-008 | A previously accepted release identity (product/channel/platform/architecture/application version) is republished under a higher Targets metadata version with a different target length or digest | Publishing gate rejects; client compares its durable version-to-target binding and rejects the changed bytes even though the new metadata is otherwise valid |
 | REL-009 | Accepted version-to-target binding is missing or corrupt | Fail closed; do not reconstruct from remote metadata; require out-of-band re-bootstrap before installation |
+| REL-010 | TUF Targets `custom.launchforge` identity is missing, has an unknown schema version, or mismatches the locally pinned product/channel/platform/architecture/package/runtime policy | Reject before download or staging; do not infer identity from a URL, filename, unsigned sidecar, or game manifest |
 
 ## Source and resource-bound tests
 
