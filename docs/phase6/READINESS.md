@@ -20,12 +20,31 @@ The assessment is based on the GitHub repository state inspected on 2026-11-04:
 - The root contains only `README.md` and `docs/`; `docs/` contains only `PROJECT_PLAN.md`.
 - The README contains only the repository heading.
 - The only merged pull request is PR #1, which adds the product plan and explicitly describes itself as documentation-only.
-- No open pull requests were present at the time of inspection.
+- At the time of the initial assessment, no open pull requests were present; a subsequent audit found the unmerged work listed below.
 - Phase 0–5 issues (#2–#7) are still open. Their described exit gates have not been demonstrated by merged code or test evidence in this repository state.
 - The visible Phase 1/2/4/5 work branches point to the same commit as `main`; they do not provide landed implementation or review evidence.
 - No project schema, migration implementation, renderer registry, Runtime API, security test suite, build/package pipeline, support matrix, or Phase 5 release implementation is present in the inspected tree.
 
 A branch name or an open phase issue is not evidence that its deliverables are implemented or accepted. This document does not infer completion from those signals.
+
+
+## Follow-up evidence review
+
+A follow-up review of the active work branches and pull requests on 2026-11-04 found additional preparation, but no accepted prerequisite:
+
+| Work item | Newly visible evidence | Phase 6 impact |
+|---|---|---|
+| PR #9 — Phase 1 readiness | Documentation mapping Phase 1 dependencies and exit evidence; no application implementation | Helpful handoff, but project schema, Runtime and renderer contracts remain unapproved |
+| PR #10 — Phase 2 authoring specification | Detailed authoring/layout/accessibility specification; no Studio or Runtime implementation | Defines future compatibility cases, but consumes Phase 0/1 contracts that are still absent |
+| PR #12 — Phase 4.1 prototype | Proposed manifest contract and isolated Python downloader prototype; PR body reports 28 tests passing | Useful candidate fixture/contract input only; draft, unmerged, not Runtime-integrated, and explicitly not approved |
+| Phase 5.1 branch | One publisher artifact-inventory JSON Schema | Inventory is for publisher release QA; it explicitly is not an updater manifest or trust statement. No completed release process is evidenced |
+| PR #11 — this Phase 6 readiness handoff | Draft documentation PR; CodeRabbit noted that draft PRs are not automatically reviewed | Awaiting human/integration-owner review; no approval has been recorded |
+
+The Phase 4.1 prototype reports deterministic mocked transport tests, not a live publisher integration or install/update recovery test. The proposed manifest contract defers reparse-point protection, secure install-root writes, key lifecycle, durable anti-rollback state, and Runtime lifecycle integration to later approved contracts. These gaps prevent treating Phase 4 as a stable dependency.
+
+The Phase 5.1 artifact inventory records build provenance, package metadata, hashes, and signing status. It does not itself implement or prove clean-machine installation, publisher release publication, signed launcher update metadata, trust bootstrap/rotation/revocation, rollback, or recovery. It is also on an unmerged branch, so it is not part of the current baseline.
+
+**Updated gate decision:** continue with contract-neutral 6.1 preparation (this conformance protocol and the support-matrix requirements), but keep executable conformance, 6.2 track selection, and 6.3 support work blocked. Do not reinterpret work-in-progress branches or draft PRs as reviewed/accepted contracts.
 
 ## Dependency assessment
 
@@ -35,8 +54,8 @@ A branch name or an open phase issue is not evidence that its deliverables are i
 | Phase 1 project and Runtime contracts | Merged implementation, versioned project format, stable component/capability contract, preview/export parity tests | **Not evidenced** |
 | Phase 2 compatibility surface | Stable asset/layout/theme semantics and tests showing existing projects remain unchanged | **Not evidenced** |
 | Phase 3 data/action contracts | Approved binding/action API and security behavior with shared preview/Runtime fixtures | **Not evidenced** |
-| Phase 4 game-operation contract | Approved manifest/lifecycle APIs and adversarial filesystem, integrity, and recovery results | **Not evidenced** |
-| Phase 5 release readiness | Reproducible packaging, signed/update trust and recovery evidence, diagnostics, support boundaries, reviewed release gate | **Not evidenced** |
+| Phase 4 game-operation contract | Approved manifest/lifecycle APIs and adversarial filesystem, integrity, and recovery results | **Proposal/prototype only (PR #12); not approved or Runtime-integrated** |
+| Phase 5 release readiness | Reproducible packaging, signed/update trust and recovery evidence, diagnostics, support boundaries, reviewed release gate | **Not evidenced; unmerged branch contains artifact-inventory schema only** |
 | Schema migrations | Versioned migration chain, fixtures for every supported source version, rollback/backup behavior | **Not present** |
 | Named maintenance ownership | A named maintainer and operational responsibility for each proposed supported capability | **Not recorded** |
 | User demand for an expansion | Specific recurring user workflow, requests/interviews/issues, and evidence that the proposed track materially helps | **Not recorded** |
@@ -138,4 +157,4 @@ The integration owner should attach or link the following reviewed artifacts bef
 5. A named architecture owner and named maintenance ownership for the proposed capability.
 6. User evidence supporting exactly one Phase 6 candidate track.
 
-Until those artifacts exist, this readiness record is the Phase 6 deliverable. It intentionally adds no product feature, public API, schema, or platform-support promise.
+The contract-neutral conformance protocol is now documented in `docs/phase6/CONFORMANCE_PLAN.md`. Until the required contracts, fixtures, implementations, and reviews exist, the Phase 6 deliverable remains a readiness/protocol handoff. It intentionally adds no product feature, public API, project schema, or platform-support promise.
