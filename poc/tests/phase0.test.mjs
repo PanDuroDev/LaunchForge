@@ -71,6 +71,12 @@ test("Tauri receives the exact application icon asset referenced by the project"
   assert.equal(hash(source), hash(staged));
 });
 
+test("theme tokens must be hexadecimal strings, not coercible values", () => {
+  const invalid = structuredClone(fixture);
+  invalid.theme.surface = ["#121826"];
+  expectCode(() => validateProject(invalid), "INVALID_THEME_TOKEN");
+});
+
 test("unknown schema versions fail closed", () => {
   const invalid = structuredClone(fixture);
   invalid.schemaVersion = 2;

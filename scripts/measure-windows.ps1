@@ -31,7 +31,22 @@ function Get-ProcessTreeIds([int] $RootPid) {
     return @($ids)
 }
 
+function Assert-HostAlive([Diagnostics.Process] $RootProcess, [int] $Run, [string] $Stage) {
+    $RootProcess.Refresh()
+    if ($RootProcess.HasExited) {
+        throw "Application exited during $Stage (run $Run, exit code $($RootProcess.ExitCode))."
+    }
+    $current = Get-Process -Id $RootProcess.Id -ErrorAction SilentlyContinue
+    if ($null -eq $current) {
+        throw "Application process disappeared during $Stage (run $Run)."
+    }
+}
+
 function Get-TreeCounters([int] $RootPid) {
+    $rootProcess = Get-Process -Id $RootPid -ErrorAction SilentlyContinue
+    if ($null -eq $rootProcess) {
+        throw "Application process $RootPid exited while collecting process-tree counters."
+    }
     $ids = Get-ProcessTreeIds -RootPid $RootPid
     $items = @(
         foreach ($id in $ids) {
@@ -45,7 +60,11 @@ function Get-TreeCounters([int] $RootPid) {
         if ($null -ne $item.CPU) { $cpu += [double]$item.CPU }
         $workingSet += [long]$item.WorkingSet64
     }
+    if (-not ($items | Where-Object { $_.Id -eq $RootPid })) {
+        throw "Application process $RootPid was absent from its process-tree sample."
+    }
     return [pscustomobject]@{
+        ProcessIds = $ids
         CpuSeconds = $cpu
         WorkingSetBytes = $workingSet
         ProcessCount = $items.Count
@@ -64,6 +83,7 @@ for ($run = 1; $run -le $Runs; $run++) {
     $watch = [Diagnostics.Stopwatch]::StartNew()
     $process = Start-Process -FilePath $exe -PassThru
     $windowHandleMs = $null
+    $observedTreeIds = [System.Collections.Generic.HashSet[int]]::new()
     try {
         $windowDeadline = [DateTime]::UtcNow.AddSeconds(60)
         while ([DateTime]::UtcNow -lt $windowDeadline) {
@@ -77,16 +97,23 @@ for ($run = 1; $run -le $Runs; $run++) {
         }
         if ($null -eq $windowHandleMs) { throw "No main window handle appeared within 60 seconds (run $run)." }
         Start-Sleep -Seconds $WarmupSeconds
+        Assert-HostAlive -RootProcess $process -Run $run -Stage "warm-up"
 
         $first = Get-TreeCounters -RootPid $process.Id
+        foreach ($id in $first.ProcessIds) { [void]$observedTreeIds.Add([int]$id) }
         [double]$peakWorkingSet = $first.WorkingSetBytes
         $last = $first
         $sampleWatch = [Diagnostics.Stopwatch]::StartNew()
         while ($sampleWatch.Elapsed.TotalSeconds -lt $SampleSeconds) {
             Start-Sleep -Seconds 1
+            Assert-HostAlive -RootProcess $process -Run $run -Stage "sampling"
             $last = Get-TreeCounters -RootPid $process.Id
+            foreach ($id in $last.ProcessIds) { [void]$observedTreeIds.Add([int]$id) }
             if ($last.WorkingSetBytes -gt $peakWorkingSet) { $peakWorkingSet = $last.WorkingSetBytes }
         }
+        Assert-HostAlive -RootProcess $process -Run $run -Stage "end of sampling"
+        $last = Get-TreeCounters -RootPid $process.Id
+        foreach ($id in $last.ProcessIds) { [void]$observedTreeIds.Add([int]$id) }
         $sampleWatch.Stop()
         $cpuPercent = (($last.CpuSeconds - $first.CpuSeconds) / [Math]::Max(0.001, $sampleWatch.Elapsed.TotalSeconds) / $logicalProcessors) * 100
         $runResults.Add([pscustomobject]@{
@@ -99,8 +126,14 @@ for ($run = 1; $run -le $Runs; $run++) {
         })
     }
     finally {
-        $treeIds = Get-ProcessTreeIds -RootPid $process.Id
-        foreach ($id in $treeIds) {
+        try {
+            foreach ($id in (Get-ProcessTreeIds -RootPid $process.Id)) {
+                [void]$observedTreeIds.Add([int]$id)
+            }
+        } catch {
+            # The root may already have exited; previously observed descendants are still cleaned up.
+        }
+        foreach ($id in $observedTreeIds) {
             Stop-Process -Id $id -Force -ErrorAction SilentlyContinue
         }
     }

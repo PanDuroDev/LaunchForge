@@ -20,6 +20,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
         with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
           persist-credentials: false
 
       - name: Set up Node
@@ -33,6 +34,17 @@ jobs:
       - name: Run contract and renderer tests
         shell: pwsh
         run: node --test .\poc\tests\phase0.test.mjs
+
+      - name: Validate Windows measurement script syntax
+        shell: pwsh
+        run: |
+          $tokens = $null
+          $errors = $null
+          [void][System.Management.Automation.Language.Parser]::ParseFile((Resolve-Path .\scripts\measure-windows.ps1).Path, [ref]$tokens, [ref]$errors)
+          if ($errors.Count -gt 0) {
+            $errors | ForEach-Object { Write-Host $_.ToString() }
+            exit 1
+          }
 
       - name: Build standalone renderer export
         shell: pwsh

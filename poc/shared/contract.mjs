@@ -60,7 +60,7 @@ export function validateProject(project) {
 
   if (!record(project.theme)) fail("INVALID_THEME", "Theme tokens are required", "$.theme");
   keys(project.theme, [...TOKENS], [...TOKENS], "$.theme");
-  for (const token of TOKENS) if (!HEX.test(project.theme[token] ?? "")) fail("INVALID_THEME_TOKEN", `${token} must be #RRGGBB`, `$.theme.${token}`);
+  for (const token of TOKENS) if (typeof project.theme[token] !== "string" || !HEX.test(project.theme[token])) fail("INVALID_THEME_TOKEN", `${token} must be #RRGGBB`, `$.theme.${token}`);
   if (!Array.isArray(project.assets) || project.assets.length > 128) fail("INVALID_ASSETS", "assets must be an array of at most 128 entries", "$.assets");
   if (!Array.isArray(project.games) || project.games.length > 16) fail("INVALID_GAMES", "games must be an array of at most 16 entries", "$.games");
   if (!Array.isArray(project.components) || project.components.length !== 1) fail("INVALID_COMPONENTS", "Schema v1 requires exactly one root component", "$.components");

@@ -18,7 +18,7 @@ It is intentionally dependency-free. It is not the Studio editor, a Tauri build,
 
 ## Run
 ```sh
-node --test tests/*.test.mjs
+node --test tests/phase0.test.mjs
 node scripts/build-export.mjs
 python -m http.server 4173
 ```

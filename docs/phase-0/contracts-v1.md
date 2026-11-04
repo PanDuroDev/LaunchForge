@@ -119,7 +119,13 @@ interface BuildResultV1 {
 }
 ```
 
-The build request deliberately does not duplicate the icon path or ID: it resolves the single source of truth through `projectPath` → `window.iconAssetId`. `BuildResultV1` returns the resolved icon asset ID and SHA-256 so the embedded Windows resource can be audited against the project. The initial distribution format is **portable** for the MVP spike; do not add an installer until the portable package is stable. The actual Windows package format is not validated by the browser-only PoC. Export must validate the project, resolve the complete declared asset set, canonicalize every resolved asset under the project assets root, reject symlink/reparse-point escapes, scan for prohibited secrets, verify target capabilities, copy the shared renderer/runtime, and write deterministic metadata including the sorted asset-manifest hash. A failure in any security-critical step blocks export.
+The build request deliberately does not duplicate the icon path or ID: it resolves the single source of truth through `projectPath` → `window.iconAssetId`. `BuildResultV1` returns the resolved icon asset ID and SHA-256 so the embedded Windows resource can be audited against the project.
+
+### Build request trust boundary
+
+`BuildRequestV1` is a host-side build-service request. It is not a project field, renderer action, generic frontend filesystem command, or currently exposed Tauri command; the Phase 0 host registers no commands. No frontend producer is defined by this contract.
+
+If a future Studio UI initiates a build, it must use a narrow typed host operation. The host must not treat `projectPath` or `outputDirectory` as authorization merely because the UI supplied them. Prefer host-issued project/output handles. If raw paths are retained, treat both as untrusted: canonicalize the selected project file, its authorized project root, the output destination, and its authorized output root immediately before access; verify final containment under the separately authorized roots; reject traversal, alternate data streams, device/UNC escapes, symlinks, junctions, and all Windows reparse-point escapes. The host must not expose arbitrary file reads/writes or accept an executable path through this request. The initial distribution format is **portable** for the MVP spike; do not add an installer until the portable package is stable. The actual Windows package format is not validated by the browser-only PoC. Export must validate the project, resolve the complete declared asset set, canonicalize every resolved asset under the project assets root, reject symlink/reparse-point escapes, scan for prohibited secrets, verify target capabilities, copy the shared renderer/runtime, and write deterministic metadata including the sorted asset-manifest hash. A failure in any security-critical step blocks export.
 
 ### Portable Windows and cross-field validation rules
 
