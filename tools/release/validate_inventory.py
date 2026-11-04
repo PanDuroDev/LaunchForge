@@ -207,13 +207,12 @@ def _validate_signing(
                 f"{context} non-signed artifacts must not claim signer identity or timestamping"
             )
         _require_string(reason, f"{context}.reason", maximum=512)
-        if status == "unsigned":
-            if channel == "stable":
-                raise ValidationError("stable releases must not contain unsigned artifacts")
-            if not allow_unsigned:
-                raise ValidationError(
-                    f"{context} is unsigned; pass --allow-unsigned only for a non-production preview build"
-                )
+        if channel == "stable":
+            raise ValidationError("stable releases must contain only signed artifacts")
+        if status == "unsigned" and not allow_unsigned:
+            raise ValidationError(
+                f"{context} is unsigned; pass --allow-unsigned only for a non-production preview build"
+            )
 
 
 def validate_inventory(
@@ -245,14 +244,12 @@ def validate_inventory(
                 object_pairs_hook=_reject_duplicate_keys,
                 parse_constant=_reject_nonstandard_constant,
             )
-    except UnicodeDecodeError as exc:
-        raise ValidationError("manifest must be valid UTF-8") from exc
-    except json.JSONDecodeError as exc:
-        raise ValidationError(
-            f"manifest contains invalid JSON at line {exc.lineno}, column {exc.colno}"
-        ) from exc
-    except RecursionError as exc:
-        raise ValidationError("manifest nesting is too deep") from exc
+    except ValidationError:
+        raise
+    except (UnicodeDecodeError, json.JSONDecodeError, RecursionError, ValueError) as exc:
+        # ValueError also covers Python's integer-string conversion limit for
+        # hostile numeric tokens. Never leak parser internals to CLI diagnostics.
+        raise ValidationError("manifest contains invalid or excessively complex JSON") from exc
 
     inventory = _require_object(inventory, "manifest")
     _require_exact_keys(inventory, _TOP_LEVEL_KEYS, "manifest")
