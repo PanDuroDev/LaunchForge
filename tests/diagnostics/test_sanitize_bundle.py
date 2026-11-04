@@ -5,6 +5,7 @@ import os
 import tempfile
 import unittest
 from pathlib import Path
+from unittest.mock import patch
 
 from tools.diagnostics.sanitize_bundle import (
     BundleError,
@@ -18,6 +19,14 @@ from tools.diagnostics.sanitize_bundle import (
 
 class DiagnosticSanitizerTests(unittest.TestCase):
     def setUp(self) -> None:
+        # Test-only registry: production remains fail-closed until Runtime/Studio
+        # supplies an approved event-code source of truth.
+        registry_patch = patch(
+            "tools.diagnostics.sanitize_bundle._EVENT_CODES",
+            {"LF_UPDATE_FAILED"},
+        )
+        registry_patch.start()
+        self.addCleanup(registry_patch.stop)
         self.safe = {
             "schema_version": 1,
             "timestamp_utc": "2026-11-04T20:00:00Z",
@@ -37,15 +46,16 @@ class DiagnosticSanitizerTests(unittest.TestCase):
         }
 
     def test_fails_closed_without_approved_event_registry(self) -> None:
-        raw = json.dumps(self.safe).encode("utf-8") + b"\n"
-        first, stats = sanitize_jsonl(raw)
-        second, _ = sanitize_jsonl(raw)
-        self.assertEqual(first, second)
-        self.assertEqual(first, b"")
-        self.assertEqual(stats.input_records, 1)
-        self.assertEqual(stats.exported_records, 0)
-        self.assertEqual(stats.dropped_records, 1)
-        self.assertIsNone(sanitize_record(self.safe))
+        with patch("tools.diagnostics.sanitize_bundle._EVENT_CODES", set()):
+            raw = json.dumps(self.safe).encode("utf-8") + b"\n"
+            first, stats = sanitize_jsonl(raw)
+            second, _ = sanitize_jsonl(raw)
+            self.assertEqual(first, second)
+            self.assertEqual(first, b"")
+            self.assertEqual(stats.input_records, 1)
+            self.assertEqual(stats.exported_records, 0)
+            self.assertEqual(stats.dropped_records, 1)
+            self.assertIsNone(sanitize_record(self.safe))
 
     def test_unknown_fields_drop_entire_record_including_secret(self) -> None:
         hostile = dict(self.safe)
@@ -59,7 +69,7 @@ class DiagnosticSanitizerTests(unittest.TestCase):
         for secret in (b"top-secret-token", b"private.db", b"password", b"alice@example.invalid"):
             self.assertNotIn(secret, output)
 
-    def test_all_records_are_omitted_until_event_registry_is_approved(self) -> None:
+    def test_malformed_and_unknown_field_records_are_omitted(self) -> None:
         hostile = dict(self.safe, exception="token=secret")
         raw = (
             json.dumps(self.safe).encode("utf-8")
@@ -69,9 +79,10 @@ class DiagnosticSanitizerTests(unittest.TestCase):
         )
         output, stats = sanitize_jsonl(raw)
         self.assertEqual(stats.input_records, 3)
-        self.assertEqual(stats.exported_records, 0)
-        self.assertEqual(stats.dropped_records, 3)
-        self.assertEqual(output, b"")
+        self.assertEqual(stats.exported_records, 1)
+        self.assertEqual(stats.dropped_records, 2)
+        self.assertEqual(len(output.splitlines()), 1)
+        self.assertEqual(json.loads(output), self.safe)
 
     def test_duplicate_json_keys_are_omitted(self) -> None:
         raw = (
@@ -228,8 +239,8 @@ class DiagnosticSanitizerTests(unittest.TestCase):
             destination = root / "safe.jsonl"
             source.write_text(json.dumps(self.safe), encoding="utf-8")
             stats = sanitize_file(source, destination)
-            self.assertEqual(stats.exported_records, 0)
-            self.assertEqual(destination.read_bytes(), b"")
+            self.assertEqual(stats.exported_records, 1)
+            self.assertEqual(json.loads(destination.read_text(encoding="utf-8")), self.safe)
             if os.name != "nt":
                 self.assertEqual(destination.stat().st_mode & 0o777, 0o600)
 
