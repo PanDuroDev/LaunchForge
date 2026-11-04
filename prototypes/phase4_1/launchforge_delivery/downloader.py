@@ -29,6 +29,9 @@ class _Response(Protocol):
     def read(self, amount: int = -1) -> bytes:
         """Read at most the requested number of bytes from the response."""
         ...
+    def read1(self, amount: int = -1) -> bytes:
+        """Read at most one underlying chunk from the response."""
+        ...
     def getheader(self, name: str, default: Optional[str] = None) -> Optional[str]:
         """Return a response header or the supplied default."""
         ...
@@ -178,6 +181,10 @@ class BoundedDownloader:
 
             digest = hashlib.sha256()
             received = 0
+            # HTTPResponse.read(amt) may wait for the entire amount. read1()
+            # returns after at most one recv so deadline/cancellation checks
+            # run between short reads even when a peer trickles bytes.
+            read_chunk = getattr(response, "read1", response.read)
             with os.fdopen(fd, "wb", closefd=True) as output:
                 fd = -1
                 while True:
