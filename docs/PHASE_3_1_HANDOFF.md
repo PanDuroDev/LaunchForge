@@ -3,9 +3,9 @@
 ## Implemented on this branch
 
 - `packages/content-data/src/index.ts`: bounded HTTPS JSON GET adapter and typed data mapping/inspection primitives.
-- `packages/content-data/test/content-data.test.mjs`: fixture-only tests for HTTPS/method validation, redirects, cancellation, timeouts, response byte caps, JSON MIME/UTF-8/shape validation, bounded retries, JSON Pointer mapping, safe transformations, and inspector output.
+- `packages/content-data/test/content-data.test.mjs`: fixture-only tests for HTTPS/method validation, redirects, cancellation, timeouts, response byte caps, JSON MIME/UTF-8/shape validation, bounded retries (including credential preservation across a retry after a redirect), JSON Pointer mapping, safe transformations, and inspector output.
 - `packages/content-data/package.json`, `tsconfig.json`: standalone TypeScript package configuration.
-- `.github/workflows/phase3-content-data.yml`: Node 22 CI typecheck and test commands.
+- `.github/workflows/phase3-content-data.yml`: Node 22 CI typecheck and test commands with read-only token permissions, disabled checkout credential persistence, and action dependencies pinned to immutable SHAs.
 
 ## Public prototype surface
 
