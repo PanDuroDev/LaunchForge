@@ -46,7 +46,7 @@ class LifecycleTests(unittest.TestCase):
     def setUp(self):
         """Create the temporary install root, source artifacts, and transaction engine for the test."""
         self.temp = tempfile.TemporaryDirectory()
-        self.base = Path(self.temp.name)
+        self.base = Path(self.temp.name).resolve()
         self.install_dir = self.base / "Game"
         self.source = self.base / "Game.exe"
         self.source.write_bytes(b"verified executable bytes")
@@ -92,6 +92,53 @@ class LifecycleTests(unittest.TestCase):
         self.assertEqual(runtime.calls, [("sample.game",)])
         self.service.process_exited(0)
         self.assertEqual(self.service.snapshot.state, GameState.READY)
+
+    def test_process_exit_during_launch_is_applied_before_running_state(self):
+        """Verify an early exit callback cannot leave the service stuck in RUNNING."""
+        self.service.install("sample.game", "1", self.artifacts)
+
+        class ExitBeforeReturnRuntime:
+            def __init__(self, service):
+                """Retain the lifecycle service for an inline process-exit callback."""
+                self.service = service
+
+            def launch_game(self, game_id):
+                """Deliver process exit before returning the already-finished process handle."""
+                self.service.process_exited(0)
+                return {"pid": 1234}
+
+        handle = self.service.launch(
+            "sample.game", "1", [self.record], ExitBeforeReturnRuntime(self.service)
+        )
+        self.assertEqual(handle, {"pid": 1234})
+        self.assertEqual(self.service.snapshot.state, GameState.READY)
+        self.assertIsNone(self.service._process_handle)
+        self.assertNotIn(GameState.RUNNING, [event.state for event in self.events])
+
+    def test_failed_launch_discards_pending_exit_before_next_launch(self):
+        """Verify a pending exit from a failed launch cannot affect a subsequent launch."""
+        self.service.install("sample.game", "1", self.artifacts)
+
+        class ExitThenFailRuntime:
+            def __init__(self, service):
+                """Retain the lifecycle service for a simulated early exit callback."""
+                self.service = service
+
+            def launch_game(self, game_id):
+                """Report an exit, then simulate a failed native launch operation."""
+                self.service.process_exited(17)
+                raise RuntimeError("simulated launch failure")
+
+        with self.assertRaisesRegex(RuntimeError, "simulated launch failure"):
+            self.service.launch(
+                "sample.game", "1", [self.record], ExitThenFailRuntime(self.service)
+            )
+        self.assertEqual(self.service.snapshot.state, GameState.ERROR)
+        self.assertEqual(self.service._pending_exit, (False, None))
+
+        self.service.launch("sample.game", "1", [self.record], FakeRuntime())
+        self.assertEqual(self.service.snapshot.state, GameState.RUNNING)
+        self.service.process_exited(0)
 
     def test_update_is_blocked_while_game_is_running(self):
         """Verify that update is blocked while game is running behaves as expected."""
